@@ -1,0 +1,14 @@
+/* src/tailwind.css */
+@import "tailwindcss";
+
+@theme {
+    --color-maroon: #800000;
+    --color-gold: #FFD700;
+    --color-mutedGold: #D4AF37;
+    --color-darkMaroon: #5C0000;
+    --color-lightGold: #FFF8DC;
+    --color-veryLightGray: #F5F5F5;
+    --color-darkGray: #333333;
+    --color-mediumGray: #6B7280;
+    --color-lightGray: #D1D5DB;
+}

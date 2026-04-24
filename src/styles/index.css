@@ -1,0 +1,17 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import './tailwind.css';
+
+/* Custom styles */
+@media (max-width: 360px) {
+    .stat-badge {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .profile-avatar {
+        width: 4rem;
+        height: 4rem;
+        font-size: 1.5rem;
+    }
+}
