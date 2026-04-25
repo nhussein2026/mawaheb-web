@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Footer from "./components/layout/Footer";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -26,6 +26,9 @@ import FinancialReport from "./pages/FinancialReport";
 import StudentDetails from "./pages/adminDashboard/StudentDetails";
 import CreateTicket from "./pages/CreateTicket";
 import TicketList from "./pages/TicketList";
+import AllUsers from "./pages/adminDashboard/AllUsers";
+import Roles from "./pages/adminDashboard/Roles";
+import Analytics from "./pages/adminDashboard/Analytics";
 import NotFound from "./pages/404";
 import ProfileComponent from "./pages/NewProfile";
 import Test from "./components/profile/Profile";
@@ -38,11 +41,13 @@ import StudentReport from "./pages/scholarshipStudentPages/StudentReport";
 
 function App() {
   // const userRole = useSelector((state) => state.auth.user.role);
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin-dashboard");
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1">
+    <div className={isAdminRoute ? "h-screen bg-gray-50 dark:bg-gray-950" : "flex flex-col min-h-screen"}>
+      {!isAdminRoute && <Header />}
+      <main className={isAdminRoute ? "h-full" : "flex-1"}>
         <Routes>
           {/* must have if else statement to handle 404 page if user play with slug or did not have permission to open specific page */}
           <Route path="/" exact element={<Home />} />
@@ -89,6 +94,9 @@ function App() {
           <Route path="/create-ticket" element={<CreateTicket />} />
           <Route path="/ticket-list" element={<TicketList />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin-dashboard/users" element={<AllUsers />} />
+          <Route path="/admin-dashboard/roles" element={<Roles />} />
+          <Route path="/admin-dashboard/analytics" element={<Analytics />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </main>
