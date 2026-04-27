@@ -29,6 +29,27 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Prepare deployment package
+        run: |
+          # Copy server.js into dist
+          cp server.js dist/server.js
+          # Create a minimal package.json for the production server
+          cat > dist/package.json << 'EOF'
+          {
+            "name": "mawaheb-web",
+            "version": "0.0.1",
+            "type": "module",
+            "scripts": {
+              "start": "node server.js"
+            },
+            "dependencies": {
+              "express": "^5.1.0"
+            }
+          }
+          EOF
+          # Install production dependencies inside dist
+          cd dist && npm install --omit=dev
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
