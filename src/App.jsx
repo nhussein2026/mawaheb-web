@@ -29,6 +29,7 @@ import TicketList from "./pages/TicketList";
 import AllUsers from "./pages/adminDashboard/AllUsers";
 import Roles from "./pages/adminDashboard/Roles";
 import Analytics from "./pages/adminDashboard/Analytics";
+import RoleRequestManager from "./pages/adminDashboard/RoleRequestManager";
 import NotFound from "./pages/404";
 import ProfileComponent from "./pages/NewProfile";
 import Test from "./components/profile/Profile";
@@ -97,6 +98,7 @@ function App() {
           <Route path="/admin-dashboard/users" element={<AllUsers />} />
           <Route path="/admin-dashboard/roles" element={<Roles />} />
           <Route path="/admin-dashboard/analytics" element={<Analytics />} />
+          <Route path="/admin-dashboard/role-requests" element={<RoleRequestManager />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </main>

@@ -7,7 +7,8 @@ import {
   BarChart3, 
   ShieldAlert,
   X,
-  GraduationCap
+  GraduationCap,
+  UserPlus
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 
@@ -18,6 +19,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Overview", href: "/admin-dashboard", icon: LayoutDashboard },
     { name: "Analytics", href: "/admin-dashboard/analytics", icon: BarChart3 },
     { name: "Users Management", href: "/admin-dashboard/users", icon: Users },
+    { name: "Role Requests", href: "/admin-dashboard/role-requests", icon: UserPlus },
     { name: "Roles & Permissions", href: "/admin-dashboard/roles", icon: ShieldAlert },
   ];
 
