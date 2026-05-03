@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import { UserPlus, User, Mail, Lock } from "lucide-react";
+import { toast } from "react-toastify";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -8,8 +11,7 @@ const Signup = () => {
     password: "",
   });
   const navigate = useNavigate();
-  const [success, setSuccess] = useState(""); // State for tracking registration success
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -26,10 +28,11 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateEmail(formData.email)) {
-      setError("Invalid email address");
+      toast.error("البريد الإلكتروني غير صالح");
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/auth/signup`,
@@ -43,86 +46,99 @@ const Signup = () => {
       );
       const data = await response.json();
       if (response.ok) {
-        setSuccess("Signup successfully!!");
+        toast.success("تم إنشاء الحساب بنجاح!");
         navigate("/login");
       } else {
-        setError(data.message || "An error occurred during signup!!");
+        toast.error(data.message || "حدث خطأ أثناء إنشاء الحساب");
       }
     } catch (error) {
       console.error("Error registering:", error);
+      toast.error("حدث خطأ في الاتصال بالخادم");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-veryLightGray">
-      <div className="bg-white shadow-md rounded-lg p-8 max-w-md w-full">
-        <h2 className="text-3xl font-semibold text-center text-darkGray mb-6">
-          Register
-        </h2>
-        {error && <div style={{ color: "red" }}>{error}</div>}
-        {success && <div style={{ color: "green" }}>{success}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label
-              htmlFor="name"
-              className="after:content-['*'] after:ml-0.5 after:text-red-500 block text-sm font-medium text-gray-700 mb-2"
-            >
-              Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-gold"
-            />
+    <div className="min-h-screen flex items-center justify-center bg-surface-page p-4" dir="rtl">
+      <div className="bg-surface-card shadow-xl rounded-3xl p-8 max-w-md w-full border border-border-subtle overflow-hidden relative">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-accent-50 rounded-full -ml-16 -mt-16 blur-2xl opacity-50"></div>
+
+        <div className="text-center mb-8 relative z-10">
+          <div className="w-16 h-16 bg-brand-800 rounded-2xl flex items-center justify-center text-accent-400 mx-auto mb-4 shadow-lg shadow-brand-900/20">
+            <UserPlus size={32} />
           </div>
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="after:content-['*'] after:ml-0.5 after:text-red-500 block text-sm font-medium text-gray-700 mb-2"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-gold"
-            />
-            {/* {errorMessage && <p className="text-sm text-red-500">{errorMessage}</p>}/ */}
+          <h2 className="text-3xl font-bold text-text-primary mb-2">إنشاء حساب</h2>
+          <p className="text-text-secondary text-sm">انضم لمجتمع مواهب وابدأ رحلتك التعليمية</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-bold text-text-secondary pr-1">الاسم الكامل</label>
+            <div className="relative">
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="أدخل اسمك الكامل"
+                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
+                required
+              />
+              <User className="absolute right-3 top-3.5 text-text-muted" size={18} />
+            </div>
           </div>
-          <div className="mb-4">
-            <label
-              htmlFor="password"
-              className="after:content-['*'] after:ml-0.5 after:text-red-500 block text-sm font-medium text-gray-700 mb-2"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-gold"
-            />
+
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-bold text-text-secondary pr-1">البريد الإلكتروني</label>
+            <div className="relative">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="example@mail.com"
+                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
+                required
+              />
+              <Mail className="absolute right-3 top-3.5 text-text-muted" size={18} />
+            </div>
           </div>
-          <button
+
+          <div className="space-y-2">
+            <label htmlFor="password" className="block text-sm font-bold text-text-secondary pr-1">كلمة المرور</label>
+            <div className="relative">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
+                required
+              />
+              <Lock className="absolute right-3 top-3.5 text-text-muted" size={18} />
+            </div>
+          </div>
+
+          <Button
             type="submit"
-            className="w-full bg-gold text-white py-2 px-4 rounded hover:bg-mutedGold"
+            variant="primary"
+            disabled={loading}
+            className="w-full h-12 text-lg shadow-lg shadow-brand-900/10"
           >
-            Register
-          </button>
+            {loading ? "جاري التسجيل..." : "تسجيل حساب جديد"}
+          </Button>
         </form>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-700">
-            Already have an account?{" "}
-            <Link to="/login" className="text-gold">
-              Log in here
+
+        <div className="mt-8 text-center relative z-10">
+          <p className="text-sm text-text-secondary">
+            لديك حساب بالفعل؟{" "}
+            <Link to="/login" className="text-brand-600 font-bold hover:underline">
+              تسجيل الدخول
             </Link>
           </p>
         </div>

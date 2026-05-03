@@ -1,11 +1,15 @@
 import React from "react";
 import { cn } from "../../utils/cn";
 
-export function Card({ className, children, ...props }) {
+export function Card({ className, children, variant = "default", ...props }) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-gray-200 bg-white text-gray-950 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-50",
+        "rounded-lg border-[0.5px] transition-all",
+        {
+          "bg-surface-card border-border-subtle shadow-sm": variant === "default",
+          "bg-[#FDF6E3] border-[#F0C95A] shadow-sm": variant === "award",
+        },
         className
       )}
       {...props}
@@ -18,7 +22,7 @@ export function Card({ className, children, ...props }) {
 export function CardHeader({ className, children, ...props }) {
   return (
     <div
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
+      className={cn("flex flex-col space-y-1.5 p-5", className)}
       {...props}
     >
       {children}
@@ -30,7 +34,7 @@ export function CardTitle({ className, children, ...props }) {
   return (
     <h3
       className={cn(
-        "text-lg font-semibold leading-none tracking-tight",
+        "text-base font-medium leading-none tracking-tight text-text-primary",
         className
       )}
       {...props}
@@ -43,7 +47,7 @@ export function CardTitle({ className, children, ...props }) {
 export function CardDescription({ className, children, ...props }) {
   return (
     <p
-      className={cn("text-sm text-gray-500 dark:text-gray-400", className)}
+      className={cn("text-sm text-text-secondary", className)}
       {...props}
     >
       {children}
@@ -53,7 +57,7 @@ export function CardDescription({ className, children, ...props }) {
 
 export function CardContent({ className, children, ...props }) {
   return (
-    <div className={cn("p-6 pt-0", className)} {...props}>
+    <div className={cn("px-5 pb-5 pt-0", className)} {...props}>
       {children}
     </div>
   );
@@ -62,10 +66,11 @@ export function CardContent({ className, children, ...props }) {
 export function CardFooter({ className, children, ...props }) {
   return (
     <div
-      className={cn("flex items-center p-6 pt-0", className)}
+      className={cn("flex items-center p-5 pt-0", className)}
       {...props}
     >
       {children}
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
-// src/components/SemesterForm.jsx
 import { useState, useEffect } from "react";
+import { Button } from "../../components/ui/Button";
+import { Plus, Trash2, X, Image as ImageIcon, BookOpen } from "lucide-react";
 
 const SemesterForm = ({ initialData, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -64,39 +65,40 @@ const SemesterForm = ({ initialData, onSave, onCancel }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          {initialData?._id ? "Edit Semester" : "New Semester"}
+    <div className="fixed inset-0 bg-surface-overlay backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-surface-card p-8 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-border-subtle relative">
+        <button onClick={onCancel} className="absolute top-4 left-4 text-text-muted hover:text-error-text transition-colors">
+          <X size={24} />
+        </button>
+        
+        <h2 className="text-2xl font-bold mb-8 text-text-primary flex items-center gap-2">
+          {initialData?._id ? "تعديل بيانات الفصل" : "إضافة فصل دراسي جديد"}
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Semester Number and GPA Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Semester Number
-              </label>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-text-secondary">رقم الفصل</label>
               <input
                 type="number"
                 name="semesterNumber"
                 value={formData.semesterNumber}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
                 required
                 min="1"
+                placeholder="1, 2, 3..."
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Semester GPA
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-text-secondary">المعدل الفصلي</label>
               <input
                 type="number"
                 name="semesterGPA"
                 value={formData.semesterGPA}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
                 step="0.01"
                 min="0"
                 max="4.0"
@@ -105,16 +107,14 @@ const SemesterForm = ({ initialData, onSave, onCancel }) => {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Cumulative GPA
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-text-secondary">المعدل التراكمي</label>
               <input
                 type="number"
                 name="totalGPA"
                 value={formData.totalGPA}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
                 step="0.01"
                 min="0"
                 max="4.0"
@@ -124,36 +124,43 @@ const SemesterForm = ({ initialData, onSave, onCancel }) => {
             </div>
           </div>
 
-          {/* Result Image Upload */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Result Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
+          <div className="space-y-4">
+            <label className="text-sm font-bold text-text-secondary block">صورة السجل / النتيجة</label>
+            <div className="border-2 border-dashed border-border-default rounded-2xl p-8 text-center space-y-2 hover:bg-neutral-50 transition-colors cursor-pointer relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <ImageIcon className="text-brand-600 mx-auto" size={32} />
+              <span className="text-sm text-text-muted block">انقر لرفع صورة النتيجة</span>
+            </div>
             {formData.resultImage && (
-              <div className="mt-3">
-                <p className="text-sm font-medium mb-1">Preview:</p>
+              <div className="mt-4 p-2 bg-neutral-50 rounded-xl border border-border-subtle inline-block">
                 <img
                   src={formData.resultImage}
                   alt="Result preview"
-                  className="max-w-full h-auto max-h-40 object-contain border rounded"
+                  className="max-w-xs h-auto max-h-40 object-contain rounded-lg"
                 />
               </div>
             )}
           </div>
 
-          {/* Courses Section */}
-          <div className="mt-6">
-            <h3 className="font-bold text-lg mb-3">Courses</h3>
-            {formData.courses.map((course, index) => (
-              <div key={index} className="border p-4 rounded mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold">Course {index + 1}</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                <BookOpen className="text-brand-600" size={20} />
+                المواد الدراسية
+              </h3>
+              <Button type="button" variant="outline" size="sm" onClick={addNewCourse}>
+                <Plus className="ml-1 w-4 h-4" /> إضافة مادة
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {formData.courses.map((course, index) => (
+                <div key={index} className="bg-neutral-50 p-6 rounded-2xl border border-border-subtle relative group transition-all hover:border-brand-200">
                   <button
                     type="button"
                     onClick={() => {
@@ -161,147 +168,98 @@ const SemesterForm = ({ initialData, onSave, onCancel }) => {
                       updatedCourses.splice(index, 1);
                       setFormData({ ...formData, courses: updatedCourses });
                     }}
-                    className="text-red-500 hover:text-red-700 text-sm"
+                    className="absolute top-4 left-4 text-text-muted hover:text-error-text opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    Remove
+                    <Trash2 size={18} />
                   </button>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Course Code
-                    </label>
-                    <input
-                      type="text"
-                      value={course.courseCode}
-                      onChange={(e) =>
-                        handleCourseChange(index, "courseCode", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">كود المادة</label>
+                      <input
+                        type="text"
+                        value={course.courseCode}
+                        onChange={(e) => handleCourseChange(index, "courseCode", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+                        required
+                        placeholder="CS101"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Course Name
-                    </label>
-                    <input
-                      type="text"
-                      value={course.courseName}
-                      onChange={(e) =>
-                        handleCourseChange(index, "courseName", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">اسم المادة</label>
+                      <input
+                        type="text"
+                        value={course.courseName}
+                        onChange={(e) => handleCourseChange(index, "courseName", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+                        required
+                        placeholder="برمجة 1"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Grade (0-100)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={course.grade}
-                      onChange={(e) =>
-                        handleCourseChange(index, "grade", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">الدرجة (0-100)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={course.grade}
+                        onChange={(e) => handleCourseChange(index, "grade", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Credits
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={course.credits}
-                      onChange={(e) =>
-                        handleCourseChange(index, "credits", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">الساعات</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={course.credits}
+                        onChange={(e) => handleCourseChange(index, "credits", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      ECTS
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={course.ects}
-                      onChange={(e) =>
-                        handleCourseChange(index, "ects", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">ECTS</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={course.ects}
+                        onChange={(e) => handleCourseChange(index, "ects", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+                        required
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Letter Grade
-                    </label>
-                    <select
-                      value={course.lg}
-                      onChange={(e) =>
-                        handleCourseChange(index, "lg", e.target.value)
-                      }
-                      className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
-                    >
-                      {[
-                        "AA",
-                        "AB",
-                        "BA",
-                        "BB",
-                        "CB",
-                        "CC",
-                        "DC",
-                        "DD",
-                        "FF",
-                      ].map((grade) => (
-                        <option key={grade} value={grade}>
-                          {grade}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">التقدير</label>
+                      <select
+                        value={course.lg}
+                        onChange={(e) => handleCourseChange(index, "lg", e.target.value)}
+                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm appearance-none"
+                      >
+                        {["AA", "AB", "BA", "BB", "CB", "CC", "DC", "DD", "FF"].map((grade) => (
+                          <option key={grade} value={grade}>{grade}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={addNewCourse}
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 text-sm"
-            >
-              Add Course
-            </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Save Semester
-            </button>
+          <div className="flex items-center justify-end gap-3 pt-8 border-t border-border-subtle">
+            <Button type="button" variant="ghost" onClick={onCancel} className="text-text-muted">
+              إلغاء
+            </Button>
+            <Button type="submit" variant="primary" className="px-10">
+              حفظ بيانات الفصل
+            </Button>
           </div>
         </form>
       </div>

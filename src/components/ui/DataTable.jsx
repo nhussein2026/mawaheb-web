@@ -13,7 +13,7 @@ export function Table({ className, ...props }) {
 }
 
 export function TableHeader({ className, ...props }) {
-  return <thead className={cn("[&_tr]:border-b", className)} {...props} />;
+  return <thead className={cn("bg-neutral-100 [&_tr]:border-b-border-subtle", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }) {
@@ -29,7 +29,7 @@ export function TableFooter({ className, ...props }) {
   return (
     <tfoot
       className={cn(
-        "border-t bg-gray-100/50 font-medium [&>tr]:last:border-b-0 dark:bg-gray-800/50",
+        "border-t bg-neutral-100 font-medium [&>tr]:last:border-b-0",
         className
       )}
       {...props}
@@ -41,7 +41,7 @@ export function TableRow({ className, ...props }) {
   return (
     <tr
       className={cn(
-        "border-b transition-colors hover:bg-gray-100/50 data-[state=selected]:bg-gray-100 dark:hover:bg-gray-800/50 dark:data-[state=selected]:bg-gray-800",
+        "border-b border-border-subtle transition-colors hover:bg-brand-50",
         className
       )}
       {...props}
@@ -53,7 +53,7 @@ export function TableHead({ className, ...props }) {
   return (
     <th
       className={cn(
-        "h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0 dark:text-gray-400",
+        "h-10 px-4 text-right align-middle text-[11px] font-medium uppercase tracking-[0.06em] text-neutral-700",
         className
       )}
       {...props}
@@ -64,8 +64,9 @@ export function TableHead({ className, ...props }) {
 export function TableCell({ className, ...props }) {
   return (
     <td
-      className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+      className={cn("p-4 align-middle text-[13px] text-text-primary", className)}
       {...props}
     />
   );
 }
+

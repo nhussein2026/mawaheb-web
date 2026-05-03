@@ -1,36 +1,49 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import StudentLayout from "../components/layout/StudentLayout";
+import { Card, CardContent } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { 
+  AlertTriangle, 
+  PlusCircle, 
+  Edit3, 
+  Trash2, 
+  ChevronLeft,
+  X,
+  MessageCircle,
+  HelpCircle
+} from "lucide-react";
 
 const DifficultyPage = () => {
   const [difficulties, setDifficulties] = useState([]);
   const [formData, setFormData] = useState({ title: "", description: "" });
   const [selectedDifficulty, setSelectedDifficulty] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
   const token = useSelector((state) => state.auth.token);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchDifficulties = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/difficulties`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const data = await response.json();
-        setDifficulties(data);
-      } catch (error) {
-        console.error("Error fetching difficulties:", error);
-        setError("Failed to load difficulties");
-      }
-    };
-
     fetchDifficulties();
   }, [token]);
+
+  const fetchDifficulties = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/difficulties`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setDifficulties(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching difficulties:", error);
+      toast.error("فشل في تحميل الصعوبات");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -39,190 +52,136 @@ const DifficultyPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/difficulties`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/difficulties`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
       const data = await response.json();
       setDifficulties([...difficulties, data.difficulty]);
-      setFormData({ title: "", description: "" });
       setShowForm(false);
+      toast.success("تم تسجيل الصعوبة بنجاح");
     } catch (error) {
-      console.error("Error creating difficulty:", error);
-      setError("Failed to create difficulty");
+      toast.error("فشل في التسجيل");
     }
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/difficulties/${selectedDifficulty._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/difficulties/${selectedDifficulty._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
       const data = await response.json();
-      setDifficulties(
-        difficulties.map((diff) =>
-          diff._id === data.difficulty._id ? data.difficulty : diff
-        )
-      );
-      setFormData({ title: "", description: "" });
-      setSelectedDifficulty(null);
+      setDifficulties(difficulties.map(diff => diff._id === data.difficulty._id ? data.difficulty : diff));
       setShowForm(false);
+      setSelectedDifficulty(null);
+      toast.success("تم التحديث بنجاح");
     } catch (error) {
-      console.error("Error updating difficulty:", error);
-      setError("Failed to update difficulty");
+      toast.error("فشل في التحديث");
     }
   };
 
   const handleDelete = async (id) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/difficulties/${id}`,
-        {
+    if (window.confirm("هل أنت متأكد من حذف هذا السجل؟")) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/difficulties/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          setDifficulties(difficulties.filter(diff => diff._id !== id));
+          toast.success("تم الحذف بنجاح");
         }
-      );
-      if (response.ok) {
-        setDifficulties(difficulties.filter((diff) => diff._id !== id));
-      } else {
-        setError("Failed to delete difficulty");
+      } catch (error) {
+        toast.error("فشل في الحذف");
       }
-    } catch (error) {
-      console.error("Error deleting difficulty:", error);
-      setError("Failed to delete difficulty");
     }
   };
 
-  const handleEdit = (difficulty) => {
-    setSelectedDifficulty(difficulty);
-    setFormData({
-      title: difficulty.title || "",
-      description: difficulty.description || "",
-    });
-    setShowForm(true);
-  };
-
-  const handleAddNew = () => {
-    setSelectedDifficulty(null);
-    setFormData({ title: "", description: "" });
-    setShowForm(true);
-  };
-
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-4xl text-darkGray font-bold mb-6">Difficulties</h1>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {!showForm && (
-        <button
-          onClick={handleAddNew}
-          className="mb-6 px-4 py-2 bg-gold text-white rounded-md hover:bg-mutedGold"
-        >
-          Add New Difficulty
-        </button>
-      )}
-
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-2xl text-darkGray font-semibold mb-4">
-            {selectedDifficulty ? "Edit Difficulty" : "Create Difficulty"}
-          </h2>
-          <form onSubmit={selectedDifficulty ? handleUpdate : handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Title
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                rows="4"
-                required
-              ></textarea>
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-darkGray text-white rounded-md hover:bg-gray-700"
-            >
-              {selectedDifficulty ? "Update" : "Create"}
-            </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="ml-4 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-700"
-            >
-              Cancel
-            </button>
-          </form>
+    <StudentLayout>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+              <AlertTriangle className="text-error-text" />
+              الصعوبات والتحديات
+            </h1>
+            <p className="text-text-secondary text-sm">أخبرنا عن أي تحديات تواجهك لنتمكن من مساعدتك.</p>
+          </div>
+          <Button onClick={() => { setSelectedDifficulty(null); setFormData({ title: "", description: "" }); setShowForm(true); }} variant="primary" className="bg-error-text hover:bg-error-text/90">
+            <PlusCircle className="ml-2 w-4 h-4" />
+            تسجيل صعوبة جديدة
+          </Button>
         </div>
-      )}
 
-      {Array.isArray(difficulties) && difficulties.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {difficulties.map((difficulty) => (
-            <div
-              key={difficulty._id}
-              className="bg-white p-6 rounded-lg shadow-md"
-            >
-              <h3 className="text-xl text-darkGray font-semibold mb-2">
-                {difficulty?.title || "No title"}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {difficulty?.description || "No description"}
-              </p>
-              <button
-                onClick={() => handleEdit(difficulty)}
-                className="mr-4 px-4 py-2 bg-gold text-white rounded-md hover:bg-mutedGold"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(difficulty._id)}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>No difficulties found.</p>
-      )}
-    </div>
+        {showForm && (
+          <Card className="border-error-border shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-text-primary">{selectedDifficulty ? "تعديل الصعوبة" : "تسجيل صعوبة جديدة"}</h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}><X size={20} className="text-text-muted" /></Button>
+              </div>
+              <form onSubmit={selectedDifficulty ? handleUpdate : handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">عنوان المشكلة</label>
+                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full p-2.5 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-error-text outline-none transition-all" placeholder="مثال: صعوبات في المناهج، مشاكل تقنية..." required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">تفاصيل الصعوبات</label>
+                  <textarea name="description" value={formData.description} onChange={handleInputChange} className="w-full p-2.5 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-error-text outline-none h-40 resize-none transition-all" placeholder="اشرح لنا بالتفصيل ما يواجهك..." required />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="submit" variant="primary" className="bg-error-text hover:bg-error-text/90 px-8">{selectedDifficulty ? "تحديث" : "إرسال"}</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {loading ? (
+          <Loading />
+        ) : difficulties.length === 0 ? (
+          <Card className="p-12 text-center border-none shadow-sm">
+            <HelpCircle className="h-16 w-16 text-neutral-200 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-text-primary mb-2">لا يوجد صعوبات مسجلة</h3>
+            <p className="text-text-secondary">نأمل أن تكون أمورك ميسرة دائماً. نحن هنا إذا احتجت للمساعدة.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {difficulties.map((difficulty) => (
+              <Card key={difficulty._id} className="border-none shadow-sm hover:shadow-md transition-all group border-r-4 border-r-error-text bg-surface-card">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-error-bg p-2 rounded-lg text-error-text border border-error-border">
+                        <MessageCircle size={20} />
+                      </div>
+                      <h3 className="font-bold text-lg text-text-primary">{difficulty.title}</h3>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => { setSelectedDifficulty(difficulty); setFormData({ title: difficulty.title, description: difficulty.description }); setShowForm(true); }} className="p-1.5 text-text-muted hover:text-brand-600 transition-colors"><Edit3 size={16} /></button>
+                      <button onClick={() => handleDelete(difficulty._id)} className="p-1.5 text-text-muted hover:text-error-text transition-colors"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed bg-neutral-50 p-4 rounded-xl border border-border-subtle">{difficulty.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </StudentLayout>
   );
 };
 

@@ -1,82 +1,77 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import StudentLayout from "../components/layout/StudentLayout";
+import { Card, CardContent } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { 
+  Award, 
+  PlusCircle, 
+  Edit3, 
+  Trash2, 
+  Image as ImageIcon,
+  ExternalLink,
+  ChevronLeft,
+  X,
+  Eye,
+  Link as LinkIcon
+} from "lucide-react";
 
-const Certificate = () => {
+const CertificatePage = () => {
   const [certificates, setCertificates] = useState([]);
-
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    certificate_link: "",
-    certificate_image: null,
-  });
+  const [formData, setFormData] = useState({ title: "", description: "", certificate_link: "", certificate_image: null });
   const [selectedCertificate, setSelectedCertificate] = useState(null);
-  const token = useSelector((state) => state.auth.token);
-  const [imageErrors, setImageErrors] = useState({});
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [viewingImage, setViewingImage] = useState(null);
+  const token = useSelector((state) => state.auth.token);
 
   useEffect(() => {
-    const fetchCertificates = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/certificates`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const data = await response.json();
-        setCertificates(data);
-      } catch (error) {
-        console.error("Error fetching certificates:", error);
-        toast.error("Failed to load certificates");
-      }
-    };
-
     fetchCertificates();
   }, [token]);
 
+  const fetchCertificates = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setCertificates(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching certificates:", error);
+      toast.error("فشل في تحميل الشهادات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
-    setFormData({
-      ...formData,
-      [name]: files ? files[0] : value,
-    });
+    setFormData({ ...formData, [name]: files ? files[0] : value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formDataToSend = new FormData();
     Object.keys(formData).forEach((key) => {
-      formDataToSend.append(key, formData[key]);
+      if (formData[key] !== null) formDataToSend.append(key, formData[key]);
     });
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/certificates`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataToSend,
-        }
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataToSend,
+      });
       const data = await response.json();
       setCertificates([...certificates, data.certificate]);
-      setFormData({
-        title: "",
-        description: "",
-        certificate_link: "",
-        certificate_image: null,
-      });
       setShowForm(false);
+      toast.success("تمت إضافة الشهادة بنجاح");
     } catch (error) {
-      console.error("Error creating certificate:", error);
-      toast.error("Failed to create certificate");
+      toast.error("فشل في إضافة الشهادة");
     }
   };
 
@@ -84,221 +79,150 @@ const Certificate = () => {
     e.preventDefault();
     const formDataToSend = new FormData();
     Object.keys(formData).forEach((key) => {
-      formDataToSend.append(key, formData[key]);
+      if (formData[key] !== null) formDataToSend.append(key, formData[key]);
     });
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/certificates/${selectedCertificate._id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataToSend,
-        }
-      );
-      const data = await response.json();
-      setCertificates(
-        certificates.map((cert) =>
-          cert._id === data.updatedCertificate._id
-            ? data.updatedCertificate
-            : cert
-        )
-      );
-      setFormData({
-        title: "",
-        description: "",
-        certificate_link: "",
-        certificate_image: null,
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates/${selectedCertificate._id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataToSend,
       });
-      setSelectedCertificate(null);
+      const data = await response.json();
+      setCertificates(certificates.map(cert => cert._id === data.updatedCertificate._id ? data.updatedCertificate : cert));
       setShowForm(false);
+      setSelectedCertificate(null);
+      toast.success("تم تحديث الشهادة بنجاح");
     } catch (error) {
-      console.error("Error updating certificate:", error);
-      toast.error("Failed to update certificate");
+      toast.error("فشل في تحديث الشهادة");
     }
   };
 
   const handleDelete = async (id) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/certificates/${id}`,
-        {
+    if (window.confirm("هل أنت متأكد من حذف هذه الشهادة؟")) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/certificates/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          setCertificates(certificates.filter(cert => cert._id !== id));
+          toast.success("تم الحذف بنجاح");
         }
-      );
-      if (response.ok) {
-        setCertificates(certificates.filter((cert) => cert._id !== id));
-      } else {
-        toast.error("Failed to delete certificate");
+      } catch (error) {
+        toast.error("فشل في الحذف");
       }
-    } catch (error) {
-      console.error("Error deleting certificate:", error);
-      toast.error("Failed to delete certificate");
     }
   };
 
-  const handleEdit = (certificate) => {
-    setSelectedCertificate(certificate);
-    setFormData({
-      title: certificate.title,
-      description: certificate.description,
-      certificate_link: certificate.certificate_link,
-      certificate_image: null,
-    });
-    setShowForm(true);
-  };
-
-  const handleImageError = (certificateId) => {
-    setImageErrors((prevErrors) => ({
-      ...prevErrors,
-      [certificateId]: true,
-    }));
-  };
-
-  const handleAddNew = () => {
-    setSelectedCertificate(null);
-    setFormData({
-      title: "",
-      description: "",
-      certificate_link: "",
-      certificate_image: null,
-    });
-    setShowForm(true);
-  };
   return (
-    <div className="container mx-auto p-4 mb-11">
-      <h1 className="text-4xl text-darkGray font-bold mb-6">Certificates</h1>
-      <button
-        onClick={handleAddNew}
-        className="px-4 py-2 mb-6 bg-gold text-white rounded-md hover:bg-mutedGold"
-      >
-        Add New Certificate
-      </button>
-
-      {showForm && (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-2xl text-darkGray font-semibold mb-4">
-            {selectedCertificate ? "Edit Certificate" : "Create Certificate"}
-          </h2>
-          <form onSubmit={selectedCertificate ? handleUpdate : handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Title
-              </label>
-              <input
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                rows="4"
-                required
-              ></textarea>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Certificate Link
-              </label>
-              <input
-                type="url"
-                name="certificate_link"
-                value={formData.certificate_link}
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Certificate Image
-              </label>
-              <input
-                type="file"
-                name="certificate_image"
-                onChange={handleInputChange}
-                className="mt-1 p-2 w-full border border-gray-300 rounded-md"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-darkGray text-white rounded-md hover:bg-gray-700"
-            >
-              {selectedCertificate ? "Update" : "Create"}
-            </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="ml-4 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-700"
-            >
-              Cancel
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {certificates.map((certificate) => (
-          <div
-            key={certificate._id}
-            className="bg-white p-6 rounded-lg shadow-md"
-          >
-            <img
-              src={
-                imageErrors[certificate._id]
-                  ? "../assets/images/No-profile-pic.jpg"
-                  : `${import.meta.env.VITE_API_URL}/uploads/${certificate.certificate_image}`
-              }
-              alt={certificate.title}
-              className="w-full h-48 object-cover rounded-md mb-4"
-              onError={() => handleImageError(certificate._id)}
-            />
-            <h3 className="text-xl text-darkGray font-semibold mb-2">
-              {certificate.title}
-            </h3>
-            <p className="text-gray-600 mb-4">{certificate.description}</p>
-            <a
-              href={certificate.certificate_link}
-              className="text-blue-500 hover:underline mb-4 block"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View Certificate
-            </a>
-            <div className="flex justify-between">
-              <button
-                onClick={() => handleEdit(certificate)}
-                className="px-4 py-2 bg-gold text-white rounded-md hover:bg-mutedGold"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(certificate._id)}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
+    <StudentLayout>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+              <Award className="text-brand-600" />
+              الشهادات المهنية
+            </h1>
+            <p className="text-text-secondary text-sm">أضف ووثق شهاداتك التي حصلت عليها.</p>
           </div>
-        ))}
+          <Button onClick={() => { setSelectedCertificate(null); setFormData({ title: "", description: "", certificate_link: "", certificate_image: null }); setShowForm(true); }} variant="primary">
+            <PlusCircle className="ml-2 w-4 h-4" />
+            إضافة شهادة جديدة
+          </Button>
+        </div>
+
+        {showForm && (
+          <Card className="border-brand-200 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-text-primary">{selectedCertificate ? "تعديل الشهادة" : "إضافة شهادة جديدة"}</h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}><X size={20} className="text-text-muted" /></Button>
+              </div>
+              <form onSubmit={selectedCertificate ? handleUpdate : handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">اسم الشهادة</label>
+                    <input type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full p-2.5 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">وصف الشهادة</label>
+                    <textarea name="description" value={formData.description} onChange={handleInputChange} className="w-full p-2.5 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all h-32" required />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">رابط الشهادة (إن وجد)</label>
+                    <div className="relative">
+                      <LinkIcon className="absolute right-3 top-3 text-text-muted" size={18} />
+                      <input type="url" name="certificate_link" value={formData.certificate_link} onChange={handleInputChange} className="w-full p-2.5 pr-10 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all" placeholder="https://..." />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">صورة الشهادة</label>
+                    <div className="border-2 border-dashed border-border-default rounded-xl p-8 text-center space-y-2 hover:bg-neutral-50 transition-colors cursor-pointer relative">
+                      <input type="file" name="certificate_image" onChange={handleInputChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" id="cert-img" accept="image/*" />
+                      <ImageIcon size={32} className="mx-auto text-brand-600 mb-2" />
+                      <span className="text-sm text-text-muted block">انقر لرفع صورة الشهادة</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:col-span-2 flex justify-end gap-2">
+                  <Button type="submit" variant="primary" className="px-8">{selectedCertificate ? "تحديث" : "حفظ"}</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {loading ? (
+          <Loading />
+        ) : certificates.length === 0 ? (
+          <Card className="p-12 text-center border-none shadow-sm">
+            <Award className="h-16 w-16 text-neutral-200 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-text-primary mb-2">لا توجد شهادات مسجلة</h3>
+            <p className="text-text-secondary">ابدأ بتوثيق إنجازاتك المهنية والتعليمية.</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {certificates.map((certificate) => (
+              <Card key={certificate._id} className="border-none shadow-sm hover:shadow-md transition-all group overflow-hidden bg-surface-card">
+                <CardContent className="p-0">
+                  <div className="relative h-48 bg-neutral-100 overflow-hidden">
+                    <img src={`${import.meta.env.VITE_API_URL}/uploads/${certificate.certificate_image}`} alt={certificate.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" onError={(e) => { e.target.src = "https://placehold.co/600x400?text=Certificate"; }} />
+                    <div className="absolute inset-0 bg-surface-overlay opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button size="sm" variant="accent" onClick={() => setViewingImage(`${import.meta.env.VITE_API_URL}/uploads/${certificate.certificate_image}`)}><Eye size={16} className="ml-1" /> عرض</Button>
+                      {certificate.certificate_link && (
+                        <a href={certificate.certificate_link} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="secondary"><ExternalLink size={16} className="ml-1" /> الرابط</Button>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-lg text-text-primary">{certificate.title}</h3>
+                      <div className="flex gap-1">
+                        <button onClick={() => { setSelectedCertificate(certificate); setFormData({ title: certificate.title, description: certificate.description, certificate_link: certificate.certificate_link || "", certificate_image: null }); setShowForm(true); }} className="p-1.5 text-text-muted hover:text-brand-600 transition-colors"><Edit3 size={16} /></button>
+                        <button onClick={() => handleDelete(certificate._id)} className="p-1.5 text-text-muted hover:text-error-text transition-colors"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-text-secondary line-clamp-3 leading-relaxed h-15">{certificate.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {viewingImage && (
+          <div className="fixed inset-0 bg-surface-overlay backdrop-blur-sm z-50 flex items-center justify-center p-4 cursor-pointer" onClick={() => setViewingImage(null)}>
+            <img src={viewingImage} alt="Certificate" className="max-w-full max-h-[90vh] rounded-lg shadow-2xl" onError={(e) => { e.target.src = "https://placehold.co/1200x800?text=Certificate"; }} />
+          </div>
+        )}
       </div>
-    </div>
+    </StudentLayout>
   );
 };
 
-export default Certificate;
+export default CertificatePage;

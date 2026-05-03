@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { login } from "../features/user/authSlice";
 import { toast } from "react-toastify";
+import { Button } from "../components/ui/Button";
+import { LogIn, Mail, Lock } from "lucide-react";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -28,7 +30,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateEmail(formData.email)) {
-      toast.error("Invalid email address");
+      toast.error("البريد الإلكتروني غير صالح");
       return;
     }
     try {
@@ -44,77 +46,99 @@ const Login = () => {
       );
       const data = await response.json();
       if (response.ok) {
-        toast.success("Login successfully!");
+        toast.success("تم تسجيل الدخول بنجاح!");
         const { token, user } = data;
         dispatch(login({ token, user }));
         navigate("/");
       } else {
-        toast.error(data.message || "An error occurred while login!");
+        toast.error(data.message || "حدث خطأ أثناء تسجيل الدخول!");
       }
     } catch (error) {
       console.error("Error logging in:", error);
+      toast.error("حدث خطأ في الاتصال بالخادم");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-veryLightGray">
-      <div className="bg-white shadow-md rounded-lg p-8 max-w-md w-full">
-        <h2 className="text-3xl font-semibold text-center text-darkGray mb-6">
-          Log In
-        </h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-surface-page p-4" dir="rtl">
+      <div className="bg-surface-card shadow-xl rounded-3xl p-8 max-w-md w-full border border-border-subtle overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 blur-2xl opacity-50"></div>
+        
+        <div className="text-center mb-8 relative z-10">
+          <div className="w-16 h-16 bg-brand-800 rounded-2xl flex items-center justify-center text-accent-400 mx-auto mb-4 shadow-lg shadow-brand-900/20">
+            <LogIn size={32} />
+          </div>
+          <h2 className="text-3xl font-bold text-text-primary mb-2">تسجيل الدخول</h2>
+          <p className="text-text-secondary text-sm">مرحباً بك مجدداً في منصة مواهب</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+          <div className="space-y-2">
             <label
               htmlFor="email"
-              className="after:content-['*'] after:ml-0.5 after:text-red-500 block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-bold text-text-secondary pr-1"
             >
-              Email
+              البريد الإلكتروني
             </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-gold"
-            />
+            <div className="relative">
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="example@mail.com"
+                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
+                required
+              />
+              <Mail className="absolute right-3 top-3.5 text-text-muted" size={18} />
+            </div>
           </div>
-          <div className="mb-4">
-            <label
-              htmlFor="password"
-              className="after:content-['*'] after:ml-0.5 after:text-red-500 block text-sm font-medium text-gray-700 mb-2"
-            >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:border-gold"
-            />
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center pr-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-bold text-text-secondary"
+              >
+                كلمة المرور
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors"
+              >
+                نسيت كلمة المرور؟
+              </Link>
+            </div>
+            <div className="relative">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
+                required
+              />
+              <Lock className="absolute right-3 top-3.5 text-text-muted" size={18} />
+            </div>
           </div>
-          <div className="flex justify-between items-center mb-4">
-            <button
-              type="submit"
-              className="bg-gold text-white py-2 px-4 rounded hover:bg-mutedGold"
-            >
-              Log In
-            </button>
-            <Link
-              to="/forgot-password"
-              className="text-sm text-gray-700 hover:text-gold"
-            >
-              Forgot Password?
-            </Link>
-          </div>
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full h-12 text-lg shadow-lg shadow-brand-900/10"
+          >
+            دخول للمنصة
+          </Button>
         </form>
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-700">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-gold">
-              Register here
+
+        <div className="mt-8 text-center relative z-10">
+          <p className="text-sm text-text-secondary">
+            ليس لديك حساب؟{" "}
+            <Link to="/signup" className="text-brand-600 font-bold hover:underline">
+              سجل الآن
             </Link>
           </p>
         </div>

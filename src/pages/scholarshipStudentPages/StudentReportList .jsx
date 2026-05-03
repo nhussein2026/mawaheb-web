@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import StudentLayout from "../../components/layout/StudentLayout";
+import { Card, CardContent } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import {
-  BookOpenIcon,
-  DocumentTextIcon,
-  ExclamationTriangleIcon,
-  TrophyIcon,
-  CalendarDaysIcon,
-  AcademicCapIcon,
-  CalendarIcon,
-  EyeIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  PhotoIcon,
-  LinkIcon,
-  XCircleIcon,
-  ClockIcon,
-  FolderOpenIcon,
-} from "@heroicons/react/24/outline";
+  BookOpen,
+  FileText,
+  AlertTriangle,
+  Trophy,
+  Calendar,
+  Award,
+  Eye,
+  ChevronDown,
+  ChevronUp,
+  XCircle,
+  Clock,
+  FolderOpen,
+  Search,
+  ExternalLink
+} from "lucide-react";
 
 const StudentReportList = () => {
   const [reports, setReports] = useState([]);
@@ -85,62 +87,62 @@ const StudentReportList = () => {
 
   const sectionConfig = {
     course: {
-      icon: BookOpenIcon,
-      title: "Course",
-      color: "bg-blue-50 border-blue-200",
-      iconColor: "text-blue-600",
+      icon: BookOpen,
+      title: "المقرر الدراسي",
+      color: "bg-brand-50 border-brand-100",
+      iconColor: "text-brand-600",
       fields: ["title", "description", "course_image"],
     },
     note: {
-      icon: DocumentTextIcon,
-      title: "Note",
-      color: "bg-green-50 border-green-200",
-      iconColor: "text-green-600",
+      icon: FileText,
+      title: "ملاحظة",
+      color: "bg-accent-50 border-accent-100",
+      iconColor: "text-accent-600",
       fields: ["title", "description"],
     },
     difficulty: {
-      icon: ExclamationTriangleIcon,
-      title: "Difficulty",
-      color: "bg-yellow-50 border-yellow-200",
-      iconColor: "text-yellow-600",
+      icon: AlertTriangle,
+      title: "صعوبة",
+      color: "bg-error-bg border-error-border",
+      iconColor: "text-error-text",
       fields: ["title", "description"],
     },
     userAchievement: {
-      icon: TrophyIcon,
-      title: "Achievement",
-      color: "bg-purple-50 border-purple-200",
-      iconColor: "text-purple-600",
+      icon: Trophy,
+      title: "إنجاز",
+      color: "bg-success-bg border-success-border",
+      iconColor: "text-success-text",
       fields: ["title", "description", "category", "achievement_image"],
     },
     event: {
-      icon: CalendarDaysIcon,
-      title: "Event",
-      color: "bg-pink-50 border-pink-200",
-      iconColor: "text-pink-600",
+      icon: Calendar,
+      title: "فعالية",
+      color: "bg-neutral-50 border-border-subtle",
+      iconColor: "text-text-primary",
       fields: ["title", "description", "photo"],
     },
     certificate: {
-      icon: AcademicCapIcon,
-      title: "Certificate",
-      color: "bg-indigo-50 border-indigo-200",
-      iconColor: "text-indigo-600",
+      icon: Award,
+      title: "شهادة",
+      color: "bg-brand-50 border-brand-100",
+      iconColor: "text-brand-600",
       fields: ["title", "description", "certificate_image", "certificate_link"],
     },
   };
 
   const renderImagePreview = (src, alt, className = "") => {
-    if (!src) return <span className="text-gray-400">No image</span>;
+    if (!src) return <span className="text-text-muted text-xs">لا توجد صورة</span>;
 
     return (
-      <div className={`relative group ${className}`}>
+      <div className={`relative group ${className} w-20 h-20`}>
         <img
           src={src}
           alt={alt}
-          className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
+          className="w-full h-full object-cover rounded-xl border border-border-subtle cursor-pointer hover:opacity-80 transition-all"
           onClick={() => setSelectedImageModal({ src, alt })}
         />
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-lg transition-all">
-          <EyeIcon className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 flex items-center justify-center bg-surface-overlay opacity-0 group-hover:opacity-100 rounded-xl transition-all">
+          <Eye className="h-5 w-5 text-white" />
         </div>
       </div>
     );
@@ -152,33 +154,33 @@ const StudentReportList = () => {
 
     if (!data) {
       return (
-        <div className="text-center py-8 text-gray-500">
-          <config.icon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No {config.title.toLowerCase()} data available</p>
+        <div className="text-center py-6 text-text-muted border border-dashed border-border-subtle rounded-xl">
+          <config.icon className="h-6 w-6 mx-auto mb-2 opacity-30" />
+          <p className="text-xs">لا توجد بيانات {config.title}</p>
         </div>
       );
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {data.title && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Title</h4>
-            <p className="text-gray-700">{data.title}</p>
+            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">العنوان</h4>
+            <p className="text-sm font-medium text-text-primary">{data.title}</p>
           </div>
         )}
 
         {data.description && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Description</h4>
-            <p className="text-gray-700 leading-relaxed">{data.description}</p>
+            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">الوصف</h4>
+            <p className="text-xs text-text-secondary leading-relaxed">{data.description}</p>
           </div>
         )}
 
         {data.category && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-1">Category</h4>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">الفئة</h4>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-brand-600 border border-brand-100">
               {data.category}
             </span>
           </div>
@@ -189,7 +191,7 @@ const StudentReportList = () => {
           data.certificate_image ||
           data.photo) && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Image</h4>
+            <h4 className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">الصورة</h4>
             {renderImagePreview(
               data.course_image ||
                 data.achievement_image ||
@@ -201,18 +203,15 @@ const StudentReportList = () => {
         )}
 
         {data.certificate_link && (
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-1">
-              Certificate Link
-            </h4>
+          <div className="pt-2">
             <a
               href={data.certificate_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+              className="inline-flex items-center text-xs font-bold text-brand-600 hover:text-brand-700 transition-colors gap-1.5"
             >
-              <LinkIcon className="h-4 w-4 mr-1" />
-              View Certificate
+              <ExternalLink className="h-3.5 w-3.5" />
+              عرض الشهادة
             </a>
           </div>
         )}
@@ -222,113 +221,81 @@ const StudentReportList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-700">
-            Loading reports...
-          </p>
+      <StudentLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
-      </div>
+      </StudentLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Error Loading Reports
-          </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
+      <StudentLayout>
+        <div className="max-w-md mx-auto text-center py-20">
+          <XCircle className="h-16 w-16 text-error-text mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-text-primary mb-2">خطأ في تحميل التقارير</h2>
+          <p className="text-text-secondary mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            إعادة المحاولة
+          </Button>
         </div>
-      </div>
+      </StudentLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="mb-4 sm:mb-0">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Your Reports
-              </h1>
-              <p className="text-gray-600">
-                {reports.length} {reports.length === 1 ? "report" : "reports"}{" "}
-                found
-              </p>
+    <StudentLayout>
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
+          <div className="text-center md:text-right">
+            <h1 className="text-2xl font-bold text-text-primary flex items-center justify-center md:justify-start gap-2">
+              <FileText className="text-brand-600" />
+              تقاريري الدراسية
+            </h1>
+            <p className="text-text-secondary text-sm mt-1">إجمالي {reports.length} تقرير تم العثور عليه.</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+              <input
+                type="text"
+                placeholder="بحث في التقارير..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pr-10 pl-4 py-2 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
+              />
             </div>
 
-            {/* Search and Sort */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search reports..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="date">Sort by Date</option>
-                <option value="title">Sort by Title</option>
-              </select>
-            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm appearance-none"
+            >
+              <option value="date">حسب التاريخ</option>
+              <option value="title">حسب العنوان</option>
+            </select>
           </div>
         </div>
 
-        {/* Reports List */}
         {filteredAndSortedReports.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <FolderOpenIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-900 mb-2">
-              {searchTerm ? "No matching reports found" : "No reports yet"}
+          <Card className="p-20 text-center border-none shadow-sm bg-surface-card">
+            <FolderOpen className="h-20 w-20 text-neutral-200 mx-auto mb-6" />
+            <h3 className="text-xl font-bold text-text-primary mb-2">
+              {searchTerm ? "لا توجد نتائج مطابقة لبحثك" : "لا توجد تقارير حالياً"}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-text-secondary max-w-sm mx-auto">
               {searchTerm
-                ? "Try adjusting your search terms or filters."
-                : "Get started by creating your first report."}
+                ? "حاول تغيير كلمات البحث أو الفلاتر المستخدمة."
+                : "ابدأ بتسجيل أول تقرير دراسي لك في المنصة."}
             </p>
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Clear Search
-              </button>
+              <Button onClick={() => setSearchTerm("")} variant="ghost" className="mt-4 text-brand-600">
+                مسح البحث
+              </Button>
             )}
-          </div>
+          </Card>
         ) : (
           <div className="space-y-6">
             {filteredAndSortedReports.map((report) => {
@@ -337,32 +304,26 @@ const StudentReportList = () => {
               return (
                 <div
                   key={report._id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                  className="bg-surface-card rounded-2xl shadow-sm border border-border-subtle overflow-hidden transition-all hover:border-brand-200"
                 >
-                  {/* Report Header */}
-                  <div className="p-6 border-b border-gray-200">
+                  <div className="p-6 cursor-pointer" onClick={() => toggleReportExpansion(report._id)}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-semibold text-gray-900 truncate mb-2">
-                          {report.title || "Untitled Report"}
+                        <h2 className="text-lg font-bold text-text-primary mb-2 group-hover:text-brand-600 transition-colors">
+                          {report.title || "تقرير بدون عنوان"}
                         </h2>
-                        <div className="flex items-center text-sm text-gray-500 space-x-4">
-                          <div className="flex items-center">
-                            <CalendarIcon className="h-4 w-4 mr-1" />
-                            {new Date(report.date_of_report).toLocaleDateString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              }
-                            )}
+                        <div className="flex items-center text-xs text-text-secondary gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-brand-400" />
+                            {new Date(report.date_of_report).toLocaleDateString("ar-SA", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
                           </div>
-                          <div className="flex items-center">
-                            <ClockIcon className="h-4 w-4 mr-1" />
-                            {new Date(
-                              report.createdAt || report.date_of_report
-                            ).toLocaleTimeString("en-US", {
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-brand-400" />
+                            {new Date(report.createdAt || report.date_of_report).toLocaleTimeString("ar-SA", {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -370,36 +331,28 @@ const StudentReportList = () => {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => toggleReportExpansion(report._id)}
-                        className="ml-4 p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
-                      >
-                        {isExpanded ? (
-                          <ChevronUpIcon className="h-5 w-5" />
-                        ) : (
-                          <ChevronDownIcon className="h-5 w-5" />
-                        )}
-                      </button>
+                      <div className={`p-2 rounded-lg transition-colors ${isExpanded ? 'bg-brand-50 text-brand-600' : 'text-text-muted hover:bg-neutral-50'}`}>
+                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Report Content */}
                   {isExpanded && (
-                    <div className="p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="p-6 pt-0 border-t border-border-subtle bg-neutral-50/20">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pt-6">
                         {Object.entries(sectionConfig).map(([key, config]) => {
                           const IconComponent = config.icon;
 
                           return (
                             <div
                               key={key}
-                              className={`rounded-lg border p-4 ${config.color}`}
+                              className={`rounded-2xl border p-5 bg-white shadow-sm transition-all hover:shadow-md ${config.color}`}
                             >
-                              <div className="flex items-center mb-4">
-                                <IconComponent
-                                  className={`h-5 w-5 mr-2 ${config.iconColor}`}
-                                />
-                                <h3 className="font-semibold text-gray-900">
+                              <div className="flex items-center gap-3 mb-5 border-b border-white/50 pb-3">
+                                <div className={`p-2 rounded-xl bg-white shadow-sm ${config.iconColor}`}>
+                                  <IconComponent size={18} />
+                                </div>
+                                <h3 className="font-bold text-text-primary text-sm">
                                   {config.title}
                                 </h3>
                               </div>
@@ -418,24 +371,24 @@ const StudentReportList = () => {
 
         {/* Image Modal */}
         {selectedImageModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-            <div className="relative max-w-4xl max-h-full">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-overlay backdrop-blur-md" onClick={() => setSelectedImageModal(null)}>
+            <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => setSelectedImageModal(null)}
-                className="absolute -top-10 right-0 text-white hover:text-gray-300 focus:outline-none"
+                className="absolute -top-12 right-0 text-white hover:text-accent-400 transition-colors"
               >
-                <XCircleIcon className="h-8 w-8" />
+                <XCircle size={32} />
               </button>
               <img
                 src={selectedImageModal.src}
                 alt={selectedImageModal.alt}
-                className="max-w-full max-h-full rounded-lg shadow-2xl"
+                className="w-full h-auto rounded-2xl shadow-2xl border border-white/10"
               />
             </div>
           </div>
         )}
       </div>
-    </div>
+    </StudentLayout>
   );
 };
 

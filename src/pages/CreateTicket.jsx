@@ -1,65 +1,108 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import StudentLayout from '../components/layout/StudentLayout';
+import { Card, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { MessageSquare, Send, ChevronRight } from 'lucide-react';
 
-const CreateTicket = ({ userId }) => {
+const CreateTicket = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const token = useSelector((state) => state.auth.token);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await fetch('/api/tickets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, title, description })
-    });
+    setLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/ticket`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ title, description })
+      });
 
-    if (response.ok) {
-      alert('Ticket created successfully');
-      setTitle('');
-      setDescription('');
-    } else {
-      alert('Failed to create a ticket');
+      if (response.ok) {
+        toast.success('تم إرسال التذكرة بنجاح');
+        navigate('/ticket-list');
+      } else {
+        toast.error('فشل في إرسال التذكرة');
+      }
+    } catch (error) {
+      toast.error('حدث خطأ ما');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow-md rounded-md mt-10">
-      <h2 className="text-xl font-bold mb-6 text-center">Submit a Ticket</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ticket Title"
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          />
+    <StudentLayout>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="flex items-center gap-2 text-text-muted hover:text-brand-600 transition-colors cursor-pointer" onClick={() => navigate(-1)}>
+          <ChevronRight size={20} />
+          <span className="font-medium text-sm">العودة</span>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe your issue"
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            rows="4"
-          />
-        </div>
+        <Card className="border-none shadow-xl overflow-hidden bg-surface-card">
+          <div className="bg-brand-900 p-8 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-800/20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+            <MessageSquare size={40} className="mb-4 text-accent-400 opacity-80 relative z-10" />
+            <h1 className="text-2xl font-bold relative z-10">فتح تذكرة دعم جديدة</h1>
+            <p className="text-brand-200 text-sm mt-1 relative z-10">اشرح لنا مشكلتك وسنقوم بالرد عليك في أقرب وقت ممكن.</p>
+          </div>
+          <CardContent className="p-8">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-text-secondary">عنوان التذكرة</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="مثال: مشكلة في رفع التقرير"
+                  required
+                  className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
+                />
+              </div>
 
-        <div className="text-center">
-          <button
-            type="submit"
-            className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Submit Ticket
-          </button>
-        </div>
-      </form>
-    </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-text-secondary">وصف المشكلة</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="اكتب تفاصيل مشكلتك هنا..."
+                  required
+                  rows="5"
+                  className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all resize-none"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                variant="primary"
+                className="w-full h-12 rounded-xl text-lg"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <Send className="ml-2" size={18} />
+                    إرسال التذكرة
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </StudentLayout>
   );
 };
+
 
 export default CreateTicket;

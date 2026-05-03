@@ -2,25 +2,42 @@ import React from "react";
 import { cn } from "../../utils/cn";
 
 export const Button = React.forwardRef(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
+  ({ className, variant = "primary", size = "default", ...props }, ref) => {
     return (
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-gray-950 dark:focus-visible:ring-gray-300",
+          "inline-flex items-center justify-center whitespace-nowrap text-sm font-bold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:cursor-not-allowed disabled:opacity-50 rounded-xl active:scale-[0.98]",
           {
-            "bg-gray-900 text-gray-50 hover:bg-gray-900/90 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-50/90":
-              variant === "default",
-            "bg-red-500 text-gray-50 hover:bg-red-500/90 dark:bg-red-900 dark:text-gray-50 dark:hover:bg-red-900/90":
-              variant === "destructive",
-            "border border-gray-200 bg-white hover:bg-gray-100 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50":
-              variant === "outline",
-            "hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-50":
+            /* Primary Variant */
+            "bg-brand-800 text-brand-50 hover:bg-brand-700 shadow-md shadow-brand-900/10 border-none":
+              variant === "primary" || variant === "default",
+            
+            /* Secondary Variant */
+            "bg-brand-50 text-brand-800 border border-brand-200 hover:bg-brand-100 hover:border-brand-300":
+              variant === "secondary" || variant === "outline",
+            
+            /* Gold / Award Variant */
+            "bg-accent-400 text-accent-900 hover:bg-accent-300 shadow-md shadow-accent-900/10 border-none":
+              variant === "accent" || variant === "gold",
+            
+            /* Danger Variant */
+            "bg-error-bg text-error-text border border-error-border hover:bg-red-100 hover:border-red-200":
+              variant === "danger" || variant === "destructive",
+            
+            /* Ghost Variant */
+            "bg-transparent hover:bg-neutral-100 text-text-secondary hover:text-text-primary":
               variant === "ghost",
-            "h-10 px-4 py-2": size === "default",
-            "h-9 rounded-md px-3": size === "sm",
-            "h-11 rounded-md px-8": size === "lg",
-            "h-10 w-10": size === "icon",
+
+            /* Dark Variant */
+            "bg-brand-900 text-brand-50 hover:bg-brand-800 border-none":
+              variant === "dark",
+
+            /* Sizes */
+            "px-6 py-2.5 h-11": size === "default",
+            "px-4 py-2 h-9 text-xs": size === "sm",
+            "px-8 py-3 h-14 text-base": size === "lg",
+            "h-10 w-10 p-0": size === "icon",
           },
           className
         )}
@@ -30,3 +47,4 @@ export const Button = React.forwardRef(
   }
 );
 Button.displayName = "Button";
+

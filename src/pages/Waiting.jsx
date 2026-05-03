@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { GraduationCap, Send, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loading } from "../components/ui/Loading";
+import { GraduationCap, Send, Clock, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "react-toastify";
 
 const ROLES = [
@@ -38,8 +39,6 @@ const Waiting = () => {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Server Error:", errorText);
         throw new Error(`Server returned ${response.status}`);
       }
 
@@ -60,77 +59,88 @@ const Waiting = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4 font-['Cairo']" dir="rtl">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-surface-page p-4 font-sans" dir="rtl">
+      <div className="max-w-md w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 mb-4">
-            <GraduationCap size={40} />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-brand-800 text-accent-400 mb-6 shadow-2xl shadow-brand-900/20 border border-brand-700/50">
+            <GraduationCap size={48} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">أهلاً بك في منصة مواهب</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">خطوة واحدة تفصلك عن الانضمام لمجتمعنا</p>
+          <h1 className="text-3xl font-bold text-text-primary tracking-tight">أهلاً بك في منصة مواهب</h1>
+          <p className="text-text-secondary mt-2 font-medium">خطوة واحدة تفصلك عن الانضمام لمجتمعنا</p>
         </div>
 
-        <Card className="border-none shadow-xl overflow-hidden">
-          <CardHeader className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-            <CardTitle className="text-xl">تحديد نوع العضوية</CardTitle>
-            <CardDescription>
-              يرجى اختيار نوع العضوية التي ترغب في الحصول عليها في منصتنا ليتم مراجعتها من قبل الإدارة.
+        <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-surface-card">
+          <CardHeader className="bg-gradient-to-br from-brand-900 to-brand-800 p-8 text-white relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-accent-400/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+            <CardTitle className="text-2xl font-bold relative z-10">تحديد نوع العضوية</CardTitle>
+            <CardDescription className="text-brand-200 mt-2 relative z-10 leading-relaxed opacity-90">
+              يرجى اختيار نوع العضوية التي ترغب في الحصول عليها ليتم مراجعتها من قبل الإدارة.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8">
             {requestStatus === "Pending" ? (
-              <div className="space-y-6 text-center py-4">
+              <div className="space-y-8 text-center py-4">
                 <div className="flex justify-center">
                   <div className="relative">
-                    <Clock className="w-16 h-16 text-amber-500 animate-pulse" />
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full animate-ping"></div>
+                    <div className="w-20 h-20 bg-accent-50 rounded-full flex items-center justify-center text-accent-600 border border-accent-100 shadow-inner">
+                      <Clock className="w-10 h-10 animate-pulse" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent-400 rounded-full animate-ping border-2 border-white"></div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">طلبك قيد المراجعة</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mt-2">
-                    لقد قمت بطلب الانضمام كـ <span className="font-bold text-indigo-600 dark:text-indigo-400">{requestedRole}</span>.
+                  <h3 className="text-xl font-bold text-text-primary">طلبك قيد المراجعة</h3>
+                  <p className="text-text-secondary mt-3 leading-relaxed">
+                    لقد قمت بطلب الانضمام كـ <span className="font-bold text-brand-600">[{requestedRole}]</span>.
                     سيقوم أحد المشرفين بمراجعة طلبك وتفعيل حسابك قريباً.
                   </p>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-lg p-4 text-sm text-amber-800 dark:text-amber-300">
-                  يرجى التواصل مع أحد المشرفين إذا تأخر الرد على طلبك.
+                <div className="bg-brand-50 border border-brand-100 rounded-2xl p-5 text-sm text-brand-800 font-medium flex items-center gap-3">
+                  <Sparkles size={20} className="text-accent-600 shrink-0" />
+                  <span>يرجى الانتظار أو التواصل مع المشرف لتسريع العملية.</span>
                 </div>
               </div>
             ) : requestStatus === "Rejected" ? (
-              <div className="space-y-6 text-center py-4">
+              <div className="space-y-8 text-center py-4">
                 <div className="flex justify-center">
-                  <AlertCircle className="w-16 h-16 text-red-500" />
+                  <div className="w-20 h-20 bg-error-bg rounded-full flex items-center justify-center text-error-text border border-error-border shadow-inner">
+                    <AlertCircle className="w-10 h-10" />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">تم رفض الطلب</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mt-2">
-                    نعتذر، لم يتم الموافقة على طلب انضمامك كـ <span className="font-bold">{requestedRole}</span>.
-                    يمكنك التواصل مع الإدارة للاستفسار أو إعادة تقديم الطلب.
+                  <h3 className="text-xl font-bold text-text-primary">تم رفض الطلب</h3>
+                  <p className="text-text-secondary mt-3 leading-relaxed">
+                    نعتذر، لم يتم الموافقة على طلب انضمامك كـ <span className="font-bold">[{requestedRole}]</span>.
+                    يمكنك إعادة المحاولة أو التواصل مع الدعم الفني.
                   </p>
                 </div>
                 <Button 
                   onClick={() => setRequestStatus("None")}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700"
+                  variant="primary"
+                  className="w-full h-12 shadow-lg"
                 >
                   إعادة تقديم الطلب
                 </Button>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="grid gap-3">
+              <div className="space-y-8">
+                <div className="grid gap-4">
                   {ROLES.map((role) => (
                     <button
                       key={role}
                       onClick={() => setSelectedRole(role)}
-                      className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 text-right ${
+                      className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 text-right group ${
                         selectedRole === role
-                          ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
-                          : "border-gray-100 dark:border-gray-800 hover:border-indigo-200 dark:hover:border-indigo-900/30"
+                          ? "border-brand-600 bg-brand-50 text-brand-900 shadow-lg shadow-brand-900/5 scale-[1.02]"
+                          : "border-border-subtle hover:border-brand-200 hover:bg-neutral-50/50"
                       }`}
                     >
-                      <span className="font-medium">{role}</span>
-                      {selectedRole === role && <CheckCircle2 className="w-5 h-5" />}
+                      <span className={`font-bold transition-colors ${selectedRole === role ? "text-brand-800" : "text-text-secondary group-hover:text-text-primary"}`}>{role}</span>
+                      {selectedRole === role ? (
+                        <CheckCircle2 className="w-6 h-6 text-brand-600 animate-in zoom-in duration-300" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full border-2 border-border-default group-hover:border-brand-200 transition-colors"></div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -138,16 +148,17 @@ const Waiting = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={loading || !selectedRole}
-                  className="w-full h-12 text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
+                  variant="primary"
+                  className="w-full h-14 text-xl shadow-xl shadow-brand-900/10"
                 >
                   {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>جاري الإرسال...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Send size={18} />
+                    <div className="flex items-center gap-3">
+                      <Send size={22} className="rotate-180" />
                       <span>إرسال الطلب للمراجعة</span>
                     </div>
                   )}
@@ -157,8 +168,8 @@ const Waiting = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-gray-400 dark:text-gray-600 text-xs mt-8">
-          © 2026 منصة مواهب. جميع الحقوق محفوظة.
+        <p className="text-center text-text-muted text-xs mt-10 font-medium">
+          © 2026 منصة مواهب الرقمية. جميع الحقوق محفوظة.
         </p>
       </div>
     </div>
