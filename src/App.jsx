@@ -30,6 +30,11 @@ import AllUsers from "./pages/adminDashboard/AllUsers";
 import Roles from "./pages/adminDashboard/Roles";
 import Analytics from "./pages/adminDashboard/Analytics";
 import RoleRequestManager from "./pages/adminDashboard/RoleRequestManager";
+import AdminStudentReports from "./pages/adminDashboard/AdminStudentReports";
+import AdminTickets from "./pages/adminDashboard/AdminTickets";
+import AdminProgramsHub from "./pages/adminDashboard/AdminProgramsHub";
+import AdminFinancialOverview from "./pages/adminDashboard/AdminFinancialOverview";
+import AdminScholarshipHub from "./pages/adminDashboard/AdminScholarshipHub";
 import NotFound from "./pages/404";
 import ProfileComponent from "./pages/NewProfile";
 import Test from "./components/profile/Profile";
@@ -46,7 +51,7 @@ function App() {
   const isAdminRoute = location.pathname.startsWith("/admin-dashboard");
 
   return (
-    <div className={isAdminRoute ? "h-screen bg-gray-50 dark:bg-gray-950" : "flex flex-col min-h-screen"}>
+    <div className={isAdminRoute ? "h-screen bg-surface-page" : "flex flex-col min-h-screen"}>
       {!isAdminRoute && <Header />}
       <main className={isAdminRoute ? "h-full" : "flex-1"}>
         <Routes>
@@ -99,6 +104,11 @@ function App() {
           <Route path="/admin-dashboard/roles" element={<Roles />} />
           <Route path="/admin-dashboard/analytics" element={<Analytics />} />
           <Route path="/admin-dashboard/role-requests" element={<RoleRequestManager />} />
+          <Route path="/admin-dashboard/reports" element={<AdminStudentReports />} />
+          <Route path="/admin-dashboard/tickets" element={<AdminTickets />} />
+          <Route path="/admin-dashboard/programs" element={<AdminProgramsHub />} />
+          <Route path="/admin-dashboard/financial" element={<AdminFinancialOverview />} />
+          <Route path="/admin-dashboard/scholarship" element={<AdminScholarshipHub />} />
           <Route path="/*" element={<NotFound />} />
         </Routes>
       </main>

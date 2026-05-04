@@ -1,34 +1,48 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
+import { useLocation, Link } from "react-router-dom";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/DataTable";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Search, Edit, Trash2, Filter } from "lucide-react";
+import { Search, Edit, Trash2, Download } from "lucide-react";
+import { formatRoleAr } from "../../components/admin/adminCopy";
 
-const AllUsers = () => {
+const roleBadge =
+  "inline-flex items-center rounded-full border-[0.5px] border-success-border bg-success-bg px-2.5 py-0.5 text-[11px] font-medium text-success-text";
+
+export default function AllUsers() {
   const token = useSelector((state) => state.auth.token);
+  const location = useLocation();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Pagination and Filtering
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("search") || "";
+    setSearchTerm(q);
+    setPage(1);
+  }, [location.search]);
+
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams({
-        page,
-        limit: 10,
+        page: String(page),
+        limit: "10",
         sortBy: "createdAt",
-        sortOrder: "desc"
+        sortOrder: "desc",
       });
-      
+
       if (searchTerm) queryParams.append("search", searchTerm);
       if (roleFilter) queryParams.append("role", roleFilter);
 
@@ -39,7 +53,7 @@ const AllUsers = () => {
         },
       });
 
-      if (!response.ok) throw new Error("Failed to fetch users");
+      if (!response.ok) throw new Error("تعذّر جلب المستخدمين");
 
       const data = await response.json();
       if (data.success) {
@@ -52,20 +66,19 @@ const AllUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, searchTerm, roleFilter, token]);
 
   useEffect(() => {
-    // Debounce search
     const delayDebounceFn = setTimeout(() => {
       fetchUsers();
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [page, searchTerm, roleFilter, token]);
+  }, [fetchUsers]);
 
   const handleDeleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
-    
+    if (!window.confirm("هل أنت متأكد من حذف هذا المستخدم؟")) return;
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/user/users/${id}`, {
         method: "DELETE",
@@ -73,72 +86,107 @@ const AllUsers = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (!response.ok) throw new Error("Failed to delete user");
-      
-      // Refresh the list
+      if (!response.ok) throw new Error("فشل الحذف");
+
       fetchUsers();
     } catch (err) {
-      alert("Error deleting user: " + err.message);
+      alert("خطأ أثناء الحذف: " + err.message);
     }
   };
+
+  const exportCsv = () => {
+    const header = ["الاسم", "البريد", "الدور", "الهاتف"];
+    const lines = [header.join(",")].concat(
+      users.map((u) =>
+        [u.name, u.email, formatRoleAr(u.role), u.phone_number || ""]
+          .map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+    );
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mawaheb-users-page-${page}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectClass =
+    "flex h-10 w-full items-center rounded-md border-[0.5px] border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50";
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">User Management</h1>
-          <p className="text-gray-500 dark:text-gray-400">View, manage, and configure users across the platform.</p>
-        </div>
+        <AdminPageHeader
+          title="دليل المستخدمين"
+          description="بحث، تصفية، تصدير، وحذف الحسابات. يُفضّل تعديل الأدوار من صفحة الأدوار المخصصة."
+        />
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle>All Users</CardTitle>
-                <CardDescription>A list of all users in your account including their name, role, and email.</CardDescription>
+                <CardTitle>كل المستخدمين</CardTitle>
+                <CardDescription>قائمة مرقّمة من مسار `/admin/users`.</CardDescription>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Search className="pointer-events-none absolute start-2.5 top-2.5 h-4 w-4 text-text-muted" />
                   <Input
                     type="search"
-                    placeholder="Search users..."
-                    className="pl-8 w-full sm:w-64"
+                    placeholder="ابحث عن مستخدم…"
+                    className="ps-9 sm:w-64"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setPage(1);
+                    }}
                   />
                 </div>
-                <div className="relative">
-                  <select 
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:placeholder:text-gray-400 dark:focus:ring-gray-300"
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                  >
-                    <option value="">All Roles</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Employee">Employee</option>
-                    <option value="Institute Student">Institute Student</option>
-                    <option value="Scholarship Student">Scholarship Student</option>
-                    <option value="User">User</option>
-                  </select>
-                </div>
+                <select
+                  className={selectClass + " sm:w-52"}
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">كل الأدوار</option>
+                  <option value="Admin">مسؤول</option>
+                  <option value="Employee">موظف</option>
+                  <option value="Institute Student">طالب معهد</option>
+                  <option value="Scholarship Student">طالب منحة</option>
+                  <option value="User">مستخدم</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-md"
+                  disabled={!users.length}
+                  onClick={exportCsv}
+                >
+                  <Download className="ms-1.5 h-4 w-4" />
+                  تصدير CSV
+                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {loading && users.length === 0 ? (
-              <div className="py-10 text-center text-gray-500">Loading users...</div>
+              <div className="py-10 text-center text-sm text-text-secondary">جاري تحميل المستخدمين…</div>
             ) : error ? (
-              <div className="py-10 text-center text-red-500">{error}</div>
+              <div className="py-10 text-center text-sm text-error-text">{error}</div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="hidden md:table-cell">Phone</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>المستخدم</TableHead>
+                      <TableHead>الدور</TableHead>
+                      <TableHead className="hidden md:table-cell">الهاتف</TableHead>
+                      <TableHead className="text-end">إجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -146,31 +194,42 @@ const AllUsers = () => {
                       <TableRow key={user._id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <img 
-                              className="h-10 w-10 rounded-full object-cover bg-gray-100" 
-                              src={user.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
-                              alt="" 
+                            <img
+                              className="h-10 w-10 rounded-full border-[0.5px] border-border-subtle object-cover bg-neutral-100"
+                              src={
+                                user.imageUrl ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=EAF3EC&color=1A3A2A`
+                              }
+                              alt=""
                             />
                             <div>
-                              <div className="font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                              <div className="font-medium text-text-primary">{user.name}</div>
+                              <div className="text-sm text-text-secondary">{user.email}</div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
-                            {user.role}
-                          </span>
+                          <span className={roleBadge}>{formatRoleAr(user.role)}</span>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-gray-500 dark:text-gray-400">
-                          {user.phone_number || "N/A"}
+                        <TableCell className="hidden text-text-secondary md:table-cell">
+                          {user.phone_number || "—"}
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" title="Edit Role (Roles Page)">
+                        <TableCell className="text-end">
+                          <div className="flex justify-end gap-1">
+                            <Link
+                              to="/admin-dashboard/roles"
+                              title="تعيين الدور"
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-neutral-100 hover:text-text-primary"
+                            >
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950" onClick={() => handleDeleteUser(user._id)}>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="حذف المستخدم"
+                              className="rounded-md text-error-text hover:bg-error-bg"
+                              onClick={() => handleDeleteUser(user._id)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -179,35 +238,36 @@ const AllUsers = () => {
                     ))}
                     {users.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          No users found.
+                        <TableCell colSpan={4} className="h-24 text-center text-text-secondary">
+                          لا يوجد مستخدمون.
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
-                
-                {/* Pagination Controls */}
-                <div className="flex items-center justify-between space-x-2 py-4">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Page {page} of {totalPages || 1}
+
+                <div className="flex items-center justify-between gap-2 py-4">
+                  <div className="text-sm text-text-muted">
+                    الصفحة {page} من {totalPages || 1}
                   </div>
-                  <div className="space-x-2">
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      className="rounded-md"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      Previous
+                      السابق
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      className="rounded-md"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages || totalPages === 0}
                     >
-                      Next
+                      التالي
                     </Button>
                   </div>
                 </div>
@@ -218,6 +278,4 @@ const AllUsers = () => {
       </div>
     </AdminLayout>
   );
-};
-
-export default AllUsers;
+}

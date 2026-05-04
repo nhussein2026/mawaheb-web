@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
+import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { UserCheck, UserX, Clock, User, Mail, Shield } from "lucide-react";
 import { toast } from "react-toastify";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import { formatRoleAr } from "../../components/admin/adminCopy";
+import { dispatchRoleRequestsRefresh } from "../../components/admin/adminRoleRequestEvents";
 
-const RoleRequestManager = () => {
+export default function RoleRequestManager() {
   const token = useSelector((state) => state.auth.token);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +21,7 @@ const RoleRequestManager = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
@@ -57,7 +60,8 @@ const RoleRequestManager = () => {
       const data = await response.json();
       if (data.success) {
         toast.success(`تم ${status === "Approved" ? "قبول" : "رفض"} الطلب بنجاح`);
-        fetchRequests();
+        await fetchRequests();
+        dispatchRoleRequestsRefresh();
       } else {
         toast.error(data.message || "فشل معالجة الطلب");
       }
@@ -70,8 +74,11 @@ const RoleRequestManager = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div
+            className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600"
+            aria-hidden="true"
+          />
         </div>
       </AdminLayout>
     );
@@ -79,68 +86,77 @@ const RoleRequestManager = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6" dir="rtl">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">طلبات تعديل الأدوار</h1>
-          <p className="text-gray-500 dark:text-gray-400">إدارة طلبات المستخدمين الجدد لتحديد أدوارهم في المنصة.</p>
-        </div>
+      <div className="space-y-6">
+        <AdminPageHeader
+          title="طلبات تعديل الأدوار"
+          description="إدارة طلبات المستخدمين لاعتماد أدوار جديدة في المنصة."
+        />
 
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {requests.length === 0 ? (
-            <Card className="p-12 text-center border-dashed">
-              <div className="flex flex-col items-center">
-                <Clock className="h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">لا توجد طلبات معلقة</h3>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">سيظهر هنا طلبات المستخدمين الجدد فور تقديمها.</p>
-              </div>
+            <Card className="border-dashed border-border-default">
+              <CardContent className="flex flex-col items-center py-14 text-center">
+                <Clock className="mb-4 h-12 w-12 text-text-muted" />
+                <h3 className="text-base font-medium text-text-primary">لا توجد طلبات معلقة</h3>
+                <p className="mt-1 max-w-md text-sm text-text-secondary">
+                  سيظهر هنا طلبات المستخدمين فور تقديمها.
+                </p>
+              </CardContent>
             </Card>
           ) : (
             requests.map((request) => (
-              <Card key={request._id} className="overflow-hidden hover:shadow-md transition-shadow">
-                <div className="flex flex-col md:flex-row items-center p-6 gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                      <User size={32} />
+              <Card key={request._id}>
+                <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
+                  <div className="flex shrink-0 items-center justify-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600 ring-1 ring-border-subtle">
+                      <User className="h-8 w-8" aria-hidden="true" />
                     </div>
                   </div>
-                  
-                  <div className="flex-grow space-y-2 text-center md:text-right">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{request.name}</h3>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-500 dark:text-gray-400">
+
+                  <div className="min-w-0 flex-1 space-y-2 text-center md:text-start">
+                    <h3 className="text-lg font-medium text-text-primary">{request.name}</h3>
+                    <div className="flex flex-wrap justify-center gap-4 text-sm text-text-secondary md:justify-start">
                       <div className="flex items-center gap-1">
-                        <Mail size={14} />
+                        <Mail className="h-4 w-4 shrink-0" />
                         <span>{request.email}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Shield size={14} />
-                        <span>الدور الحالي: {request.role}</span>
+                        <Shield className="h-4 w-4 shrink-0" />
+                        <span>الدور الحالي: {formatRoleAr(request.role)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center md:items-end gap-2 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
-                    <span className="text-xs uppercase tracking-wider text-gray-400 font-semibold">الدور المطلوب</span>
-                    <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{request.requestedRole}</span>
+                  <div className="flex flex-col items-center gap-2 rounded-md border-[0.5px] border-border-subtle bg-surface-page px-4 py-3 md:items-end">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">
+                      الدور المطلوب
+                    </span>
+                    <span className="text-base font-medium text-text-brand">
+                      {formatRoleAr(request.requestedRole)}
+                    </span>
                   </div>
 
-                  <div className="flex gap-3 mt-4 md:mt-0">
+                  <div className="flex flex-wrap justify-center gap-2 md:justify-end">
                     <Button
+                      type="button"
+                      variant="primary"
+                      className="rounded-md"
                       onClick={() => handleAction(request._id, "Approved")}
-                      className="bg-green-600 hover:bg-green-700 text-white gap-2"
                     >
-                      <UserCheck size={18} />
-                      <span>قبول</span>
+                      <UserCheck className="ms-1.5 h-4 w-4" />
+                      قبول
                     </Button>
                     <Button
+                      type="button"
+                      variant="danger"
+                      className="rounded-md"
                       onClick={() => handleAction(request._id, "Rejected")}
-                      variant="outline"
-                      className="border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 gap-2"
                     >
-                      <UserX size={18} />
-                      <span>رفض</span>
+                      <UserX className="ms-1.5 h-4 w-4" />
+                      رفض
                     </Button>
                   </div>
-                </div>
+                </CardContent>
               </Card>
             ))
           )}
@@ -148,6 +164,4 @@ const RoleRequestManager = () => {
       </div>
     </AdminLayout>
   );
-};
-
-export default RoleRequestManager;
+}

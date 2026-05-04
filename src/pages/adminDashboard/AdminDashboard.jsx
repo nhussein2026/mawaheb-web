@@ -1,70 +1,147 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import AdminLayout from "../../components/admin/AdminLayout";
+import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
-import { Users, FileText, Award, DollarSign, Activity } from "lucide-react";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, AreaChart, Area
+import {
+  Users,
+  GraduationCap,
+  UserPlus,
+  Wallet,
+  FileText,
+  MessageSquare,
+  ChevronLeft,
+  Layers,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
+import { formatRoleAr } from "../../components/admin/adminCopy";
 
-const COLORS = ['#4f46e5', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
+const ROLE_SLICE_FILLS = [
+  "var(--color-brand-400)",
+  "var(--color-brand-600)",
+  "var(--color-brand-200)",
+  "var(--color-brand-800)",
+  "var(--color-accent-400)",
+  "var(--color-neutral-500)",
+];
 
-const AdminDashboard = () => {
+const tooltipStyles = {
+  borderRadius: "var(--radius-md)",
+  border: "0.5px solid var(--color-border-subtle)",
+  background: "var(--color-surface-card)",
+};
+
+export default function AdminDashboard() {
   const token = useSelector((state) => state.auth.token);
   const [stats, setStats] = useState(null);
+  const [pendingRoleRequests, setPendingRoleRequests] = useState(null);
+  const [financialCount, setFinancialCount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchAdminStats = async () => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/stats/admin`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        if (!response.ok) throw new Error("Failed to fetch admin stats");
-        
-        const data = await response.json();
-        setStats(data);
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+
+        const [statsRes, rrRes, finRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL}/stats/admin`, { headers }),
+          fetch(`${import.meta.env.VITE_API_URL}/user/admin/role-requests`, { headers }),
+          fetch(`${import.meta.env.VITE_API_URL}/financial-report`, { headers }),
+        ]);
+
+        if (!statsRes.ok) throw new Error("تعذّر تحميل إحصاءات الإدارة.");
+
+        const statsJson = await statsRes.json();
+        setStats(statsJson);
+
+        if (rrRes.ok) {
+          const rrJson = await rrRes.json();
+          const list = rrJson.success && Array.isArray(rrJson.data) ? rrJson.data : [];
+          setPendingRoleRequests(list.length);
+        } else {
+          setPendingRoleRequests(null);
+        }
+
+        if (finRes.ok) {
+          const finJson = await finRes.json();
+          setFinancialCount(Array.isArray(finJson) ? finJson.length : 0);
+        } else {
+          setFinancialCount(null);
+        }
       } catch (err) {
         console.error(err);
-        setError(err.message);
+        setError(err.message || "حدث خطأ غير متوقع");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAdminStats();
+    if (token) load();
+    else setLoading(false);
   }, [token]);
 
-  // Transform backend stats into chart format
-  const roleDistribution = stats?.user_statistics 
-    ? Object.entries(stats.user_statistics).map(([role, data]) => ({
-        name: role,
-        value: data.count
-      }))
-    : [];
+  const roleDistribution = useMemo(() => {
+    if (!stats?.user_statistics) return [];
+    return Object.entries(stats.user_statistics).map(([role, data]) => ({
+      name: role,
+      nameAr: formatRoleAr(role),
+      value: data.count,
+    }));
+  }, [stats]);
 
-  // Mocking activity data since no clear time-series endpoint exists
-  const mockActivityData = [
-    { name: "Mon", users: 120, reports: 40 },
-    { name: "Tue", users: 150, reports: 55 },
-    { name: "Wed", users: 180, reports: 45 },
-    { name: "Thu", users: 140, reports: 60 },
-    { name: "Fri", users: 200, reports: 80 },
-    { name: "Sat", users: 220, reports: 90 },
-    { name: "Sun", users: 190, reports: 70 },
+  const activeStudents =
+    (stats?.user_statistics?.["Scholarship Student"]?.count || 0) +
+    (stats?.user_statistics?.["Institute Student"]?.count || 0);
+
+  const barPlaceholder = [
+    { name: "الإثنين", users: 12, reports: 4 },
+    { name: "الثلاثاء", users: 14, reports: 5 },
+    { name: "الأربعاء", users: 11, reports: 6 },
+    { name: "الخميس", users: 16, reports: 4 },
+    { name: "الجمعة", users: 18, reports: 7 },
+    { name: "السبت", users: 15, reports: 5 },
+    { name: "الأحد", users: 13, reports: 4 },
   ];
 
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <div
+            className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600"
+            aria-hidden="true"
+          />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div
+          className="rounded-md border-e-[3px] border-e-error-text bg-error-bg px-4 py-3 text-sm text-error-dark"
+          role="alert"
+        >
+          {error}
         </div>
       </AdminLayout>
     );
@@ -72,139 +149,219 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard Overview</h1>
-          <p className="text-gray-500 dark:text-gray-400">Welcome back. Here's what's happening with Mawaheb today.</p>
+      <div className="space-y-8">
+        <AdminPageHeader
+          title="نظرة عامة"
+          description="مؤشرات المستخدمين وطلبات الأدوار والسجلات المالية. تُجلب البيانات من واجهة البرمجة الحية حيثما توفرت."
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">
+                إجمالي المستخدمين
+              </CardTitle>
+              <Users className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-medium text-text-primary">{stats?.total_users ?? 0}</p>
+              <p className="mt-1 text-[11px] text-text-muted">جميع الأدوار في الدليل</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">
+                الطلاب
+              </CardTitle>
+              <GraduationCap className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-medium text-text-primary">{activeStudents}</p>
+              <p className="mt-1 text-[11px] text-text-muted">منحة + معهد</p>
+            </CardContent>
+          </Card>
+
+          <Card variant="award">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-accent">
+                طلبات الأدوار
+              </CardTitle>
+              <UserPlus className="h-4 w-4 text-text-accent" aria-hidden="true" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-medium text-accent-900">
+                {pendingRoleRequests === null ? "—" : pendingRoleRequests}
+              </p>
+              <p className="mt-1 text-[11px] text-text-accent">في قائمة الانتظار</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">
+                السجلات المالية
+              </CardTitle>
+              <Wallet className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-medium text-text-primary">
+                {financialCount === null ? "—" : financialCount}
+              </p>
+              <p className="mt-1 text-[11px] text-text-muted">تقارير مسجّلة</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.total_users || 0}</div>
-              <p className="text-xs text-green-500 flex items-center mt-1">
-                +12% from last month
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <Award className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {(stats?.user_statistics?.["Scholarship Student"]?.count || 0) + 
-                 (stats?.user_statistics?.["Institute Student"]?.count || 0)}
-              </div>
-              <p className="text-xs text-green-500 flex items-center mt-1">
-                +4% from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Platform Activity</CardTitle>
-              <Activity className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">1,204</div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Interactions today
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Financial Reports</CardTitle>
-              <DollarSign className="h-4 w-4 text-gray-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">34</div>
-              <p className="text-xs text-red-500 flex items-center mt-1">
-                -2% from last month
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid gap-4 lg:grid-cols-7">
           <Card className="lg:col-span-4">
             <CardHeader>
-              <CardTitle>Activity Overview</CardTitle>
-              <CardDescription>User registrations and reports over the last 7 days.</CardDescription>
+              <CardTitle>معاينة النشاط</CardTitle>
+              <CardDescription>
+                أسبوع تجريبي للتخطيط فقط — أوصل لاحقاً بسلسلة زمنية من الخادم لاستبدال هذا العنصر.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[280px] min-h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockActivityData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorReports" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ec4899" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Area type="monotone" dataKey="users" stroke="#4f46e5" fillOpacity={1} fill="url(#colorUsers)" />
-                  <Area type="monotone" dataKey="reports" stroke="#ec4899" fillOpacity={1} fill="url(#colorReports)" />
-                </AreaChart>
+                <BarChart data={barPlaceholder} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border-subtle)" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "var(--color-text-muted)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "var(--color-text-muted)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip contentStyle={tooltipStyles} />
+                  <Bar dataKey="users" fill="var(--color-brand-600)" radius={[6, 6, 0, 0]} name="مستخدمون" />
+                  <Bar dataKey="reports" fill="var(--color-brand-200)" radius={[6, 6, 0, 0]} name="تقارير" />
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-3">
+          <Card className="relative lg:col-span-3">
             <CardHeader>
-              <CardTitle>Users by Role</CardTitle>
-              <CardDescription>Distribution of roles across the platform.</CardDescription>
+              <CardTitle>المستخدمون حسب الدور</CardTitle>
+              <CardDescription>حصّة الحسابات لكل دور من إحصاءات الإدارة.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={roleDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {roleDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute flex flex-col gap-2 right-4">
-                 {roleDistribution.map((entry, index) => (
-                    <div key={entry.name} className="flex items-center text-xs">
-                      <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length]}}></div>
-                      <span className="text-gray-600 dark:text-gray-300">{entry.name}</span>
-                    </div>
-                 ))}
+            <CardContent className="flex min-h-[280px] flex-col items-center justify-center gap-4 sm:flex-row sm:items-center">
+              <div className="h-[220px] w-full max-w-[220px] shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={roleDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={52}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {roleDistribution.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={ROLE_SLICE_FILLS[index % ROLE_SLICE_FILLS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyles} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+              <ul className="flex w-full max-w-xs flex-col gap-2 text-[12px] text-text-secondary">
+                {roleDistribution.map((entry, index) => (
+                  <li
+                    key={entry.name}
+                    className="flex items-center justify-between gap-2 border-b-[0.5px] border-border-subtle py-1.5 last:border-0"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: ROLE_SLICE_FILLS[index % ROLE_SLICE_FILLS.length] }}
+                      />
+                      {entry.nameAr}
+                    </span>
+                    <span className="font-medium text-text-primary">{entry.value}</span>
+                  </li>
+                ))}
+                {roleDistribution.length === 0 ? (
+                  <li className="text-text-muted">لا توجد إحصاءات أدوار.</li>
+                ) : null}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>المراجعة والصلاحيات</CardTitle>
+              <CardDescription>قوائم تحتاج عادةً قراراً إدارياً.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <Link
+                to="/admin-dashboard/role-requests"
+                className="flex items-center justify-between rounded-md border-[0.5px] border-border-subtle bg-surface-page px-4 py-3 text-sm text-text-primary transition-colors hover:bg-brand-50"
+              >
+                <span className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-brand-600" />
+                  طلبات الأدوار
+                </span>
+                <ChevronLeft className="h-4 w-4 text-text-muted" />
+              </Link>
+              <Link
+                to="/admin-dashboard/roles"
+                className="flex items-center justify-between rounded-md border-[0.5px] border-border-subtle bg-surface-page px-4 py-3 text-sm text-text-primary transition-colors hover:bg-brand-50"
+              >
+                <span className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-brand-600" />
+                  تعيين الأدوار
+                </span>
+                <ChevronLeft className="h-4 w-4 text-text-muted" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>المحتوى والدعم</CardTitle>
+              <CardDescription>انتقال سريع إلى أدوات التشغيل.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Link
+                to="/admin-dashboard/reports"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-4 text-xs font-medium text-brand-800 transition-colors hover:bg-brand-100"
+              >
+                <FileText className="h-4 w-4" />
+                التقارير
+              </Link>
+              <Link
+                to="/admin-dashboard/tickets"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-4 text-xs font-medium text-brand-800 transition-colors hover:bg-brand-100"
+              >
+                <MessageSquare className="h-4 w-4" />
+                التذاكر
+              </Link>
+              <Link
+                to="/admin-dashboard/programs"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-4 text-xs font-medium text-brand-800 transition-colors hover:bg-brand-100"
+              >
+                <Layers className="h-4 w-4" />
+                البرامج
+              </Link>
+              <Link
+                to="/admin-dashboard/financial"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-brand-200 bg-brand-50 px-4 text-xs font-medium text-brand-800 transition-colors hover:bg-brand-100"
+              >
+                <Wallet className="h-4 w-4" />
+                المالية
+              </Link>
             </CardContent>
           </Card>
         </div>
       </div>
     </AdminLayout>
   );
-};
-
-export default AdminDashboard;
+}

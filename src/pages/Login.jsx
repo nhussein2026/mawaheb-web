@@ -49,7 +49,11 @@ const Login = () => {
         toast.success("تم تسجيل الدخول بنجاح!");
         const { token, user } = data;
         dispatch(login({ token, user }));
-        navigate("/");
+        if (user?.role === "Admin") {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/");
+        }
       } else {
         toast.error(data.message || "حدث خطأ أثناء تسجيل الدخول!");
       }

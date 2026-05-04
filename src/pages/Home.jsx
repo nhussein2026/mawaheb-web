@@ -1,8 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import Sidebar from '../components/layout/Sidebar';
+import { Navigate } from 'react-router-dom';
 import Login from './Login';
-import AdminDashboard from './adminDashboard/AdminDashboard';
 import ScholarshipStudentDashboard from './scholarshipStudentPages/ScholarshipStudentDashboard';
 import EmployeeDashboard from './employeeDashboard/EmployeeDashboard';
 import Waiting from './Waiting';
@@ -21,7 +20,7 @@ const Home = () => {
     <div>
       {isLoggedIn ? (
         <>
-          {userRole === 'Admin' && <AdminDashboard />}
+          {userRole === 'Admin' && <Navigate to="/admin-dashboard" replace />}
           {userRole === 'User' && <Waiting />}
           {userRole === 'Employee' && <EmployeeDashboard />}
           {userRole === 'Scholarship Student' && <ScholarshipStudentDashboard />}

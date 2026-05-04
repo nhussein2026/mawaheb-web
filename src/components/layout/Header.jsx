@@ -49,7 +49,7 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="bg-surface-header text-text-inverse h-16 sticky top-0 z-50 border-b border-brand-900 shadow-sm backdrop-blur-md bg-opacity-95">
+    <header className="bg-surface-header text-text-inverse h-16 sticky top-0 z-40 border-b border-brand-900 shadow-sm backdrop-blur-md bg-opacity-95">
       <div className="container mx-auto px-4 h-full flex justify-between items-center">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-accent-400 shadow-lg shadow-brand-900/40">
@@ -86,7 +86,7 @@ const Header = () => {
                   )}
                 </button>
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-surface-card border border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="absolute right-0 z-[100] mt-2 w-80 overflow-hidden rounded-2xl border border-border-subtle bg-surface-card shadow-2xl">
                     <div className="p-4 bg-neutral-50 border-b border-border-subtle flex justify-between items-center">
                       <span className="font-bold text-text-primary text-sm">التنبيهات</span>
                       <span className="text-[10px] text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-bold uppercase">جديد</span>
@@ -121,7 +121,7 @@ const Header = () => {
                   <span className="material-icons text-brand-400 text-lg">expand_more</span>
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-surface-card border border-border-subtle rounded-2xl shadow-2xl py-2 z-50 text-right">
+                  <div className="absolute right-0 z-[100] mt-2 w-56 rounded-2xl border border-border-subtle bg-surface-card py-2 text-right shadow-2xl">
                     <div className="px-4 py-2 border-b border-border-subtle mb-1">
                       <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">الحساب</p>
                       <p className="text-xs font-medium text-text-primary truncate">{user?.email}</p>

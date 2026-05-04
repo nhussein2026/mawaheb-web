@@ -8,7 +8,7 @@ export function Card({ className, children, variant = "default", ...props }) {
         "rounded-lg border-[0.5px] transition-all",
         {
           "bg-surface-card border-border-subtle shadow-sm": variant === "default",
-          "bg-[#FDF6E3] border-[#F0C95A] shadow-sm": variant === "award",
+          "bg-accent-50 border-accent-200 shadow-sm": variant === "award",
         },
         className
       )}
