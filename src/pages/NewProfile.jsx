@@ -19,6 +19,12 @@ const Profile = () => {
   const token = useSelector((state) => state.auth.token);
   const [profile, setProfile] = useState();
 
+  const studentProfile =
+    profile?.studentProfile ||
+    profile?.scholarshipStudentProfile ||
+    profile?.instituteStudentProfile;
+  const role = profile?.user?.role;
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -36,12 +42,9 @@ const Profile = () => {
         const userData = await response.json();
         setProfile(userData);
         console.log("this is data: ", userData);
-        // setStatistics(userData.statistics);
       } catch (error) {
         console.error("Error fetching user profile:", error);
         toast.error(error.message);
-      } finally {
-        // setLoading(false);
       }
     };
     if (token) {
@@ -49,48 +52,13 @@ const Profile = () => {
     }
   }, [token]);
 
-  // New role display component
-  const RoleBadge = ({ role }) => {
-    const roleConfig = {
-      Admin: {
-        color: "bg-red-100 text-red-800",
-        icon: <ShieldCheckIcon className="w-4 h-4 mr-1" />,
-      },
-      Employee: {
-        color: "bg-blue-100 text-blue-800",
-        icon: <BriefcaseIcon className="w-4 h-4 mr-1" />,
-      },
-      "Institute Student": {
-        color: "bg-green-100 text-green-800",
-        icon: <AcademicCapIcon className="w-4 h-4 mr-1" />,
-      },
-      "Scholarship Student": {
-        color: "bg-purple-100 text-purple-800",
-        icon: <BanknotesIcon className="w-4 h-4 mr-1" />,
-      },
-    };
-
-    const config = roleConfig[role] || { color: "bg-gray-100 text-gray-800" };
-
-    return (
-      <span
-        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-          config.color
-        } ${role ? "mt-2 md:mt-0" : ""}`}
-      >
-        {config.icon}
-        {role}
-      </span>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-veryLightGray p-4 md:p-8">
       {/* Profile Header */}
       <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="w-32 h-32 rounded-full bg-maroon flex items-center justify-center text-white text-4xl font-bold">
-            {profile?.user.name[0]}
+            {profile?.user?.name?.[0] || "—"}
           </div>
           <div className="flex-1 text-center md:text-left space-y-2">
             <div className="flex flex-col md:flex-row items-center gap-2">
@@ -103,8 +71,10 @@ const Profile = () => {
               </span>
             </div>
             <p className="text-mediumGray text-base md:text-lg">
-              {profile?.program_of_study || "Program not available"} Student at{" "}
-              {profile?.university?.name || "University not available"}
+              {role === "Institute Student"
+                ? studentProfile?.education_level || "Program not available"
+                : studentProfile?.program_of_study || "Program not available"}{" "}
+              Student at {profile?.university?.name || "University not available"}
             </p>
             <div className="flex flex-wrap justify-center md:justify-start gap-2">
               <StatBadge
@@ -137,28 +107,46 @@ const Profile = () => {
         {/* Academic Details Section */}
         <div className="md:col-span-2 space-y-6">
           <SectionCard title="Academic Information">
-            <DetailItem
-              label="University ID"
-              value={profile?.student_university_id}
-            />
-            <DetailItem
-              label="Enrollment Year"
-              value={profile?.enrollment_year}
-            />
-            <DetailItem
-              label="Expected Graduation"
-              value={profile?.expected_graduation_year || "Not Available"}
-            />
-            <DetailItem
-              label="University Type"
-              value={profile?.type_of_university}
-            />
-            <DetailItem
-              label="Location"
-              value={`${profile?.city}, ${profile?.country_of_studying}`}
-            />
+            {role === "Institute Student" ? (
+              <>
+                <DetailItem
+                  label="Education Level"
+                  value={studentProfile?.education_level}
+                />
+                <DetailItem
+                  label="Talent"
+                  value={studentProfile?.talent}
+                />
+                <DetailItem
+                  label="Parent Phone"
+                  value={studentProfile?.parent_phone}
+                />
+              </>
+            ) : (
+              <>
+                <DetailItem
+                  label="University ID"
+                  value={studentProfile?.student_university_id}
+                />
+                <DetailItem
+                  label="Enrollment Year"
+                  value={studentProfile?.enrollment_year}
+                />
+                <DetailItem
+                  label="Expected Graduation"
+                  value={studentProfile?.expected_graduation_year || "Not Available"}
+                />
+                <DetailItem
+                  label="University Type"
+                  value={studentProfile?.type_of_university}
+                />
+                <DetailItem
+                  label="Location"
+                  value={`${studentProfile?.city}, ${studentProfile?.country_of_studying}`}
+                />
+              </>
+            )}
           </SectionCard>
-
           <SectionCard title="Academic Journey">
             <Timeline>
               {profile?.academicTimeline?.map((event, index) => (
@@ -208,6 +196,40 @@ const Profile = () => {
   );
 };
 export default Profile;
+
+const RoleBadge = ({ role }) => {
+  const roleConfig = {
+    Admin: {
+      color: "bg-red-100 text-red-800",
+      icon: <ShieldCheckIcon className="w-4 h-4 mr-1" />,
+    },
+    Employee: {
+      color: "bg-blue-100 text-blue-800",
+      icon: <BriefcaseIcon className="w-4 h-4 mr-1" />,
+    },
+    "Institute Student": {
+      color: "bg-green-100 text-green-800",
+      icon: <AcademicCapIcon className="w-4 h-4 mr-1" />,
+    },
+    "Scholarship Student": {
+      color: "bg-purple-100 text-purple-800",
+      icon: <BanknotesIcon className="w-4 h-4 mr-1" />,
+    },
+  };
+
+  const config = roleConfig[role] || { color: "bg-gray-100 text-gray-800" };
+
+  return (
+    <span
+      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+        config.color
+      } ${role ? "mt-2 md:mt-0" : ""}`}
+    >
+      {config.icon}
+      {role}
+    </span>
+  );
+};
 
 // Helper Components
 const StatBadge = ({ count, label }) => (

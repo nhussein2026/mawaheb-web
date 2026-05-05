@@ -79,6 +79,9 @@ const translations = {
     "Scholarship Student": "طالب مبتعث",
   },
   programNotAvailable: "البرنامج غير متوفر",
+  educationLevel: "المستوى التعليمي",
+  talent: "الموهبة",
+  parentPhone: "هاتف ولي الأمر",
   studentAt: "طالب في",
   universityNotAvailable: "الجامعة غير متوفرة",
   certificates: "الشهادات",
@@ -386,6 +389,12 @@ const Profile = () => {
   const token = useSelector((state) => state.auth.token);
   const [profile, setProfile] = useState();
 
+  const studentProfile =
+    profile?.studentProfile ||
+    profile?.scholarshipStudentProfile ||
+    profile?.instituteStudentProfile;
+  const role = profile?.user?.role;
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -450,8 +459,10 @@ const Profile = () => {
               <span style={{ color: tokens.accent400, fontSize: "18px", lineHeight: 1 }}>★</span>
             </div>
             <p style={{ color: tokens.textSecondary, fontSize: "13px", marginBottom: "14px" }}>
-              {profile?.program_of_study || translations.programNotAvailable} · {translations.studentAt}{" "}
-              {profile?.university?.name || translations.universityNotAvailable}
+              {role === "Institute Student"
+                ? studentProfile?.education_level || translations.programNotAvailable
+                : studentProfile?.program_of_study || translations.programNotAvailable}{" "}
+              · {translations.studentAt} {profile?.university?.name || translations.universityNotAvailable}
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
               {[
@@ -478,11 +489,27 @@ const Profile = () => {
           {/* Left column */}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <SectionCard title={translations.academicInformation}>
-              <DetailItem label={translations.universityId} value={profile?.scholarshipStudentProfile?.student_university_id} />
-              <DetailItem label={translations.enrollmentYear} value={profile?.scholarshipStudentProfile?.enrollment_year} />
-              <DetailItem label={translations.expectedGraduation} value={profile?.scholarshipStudentProfile?.expected_graduation_year || translations.notAvailable} />
-              <DetailItem label={translations.universityType} value={profile?.scholarshipStudentProfile?.type_of_university} />
-              <DetailItem label={translations.location} value={profile?.scholarshipStudentProfile ? `${profile.scholarshipStudentProfile.city}, ${profile.scholarshipStudentProfile.country_of_studying}` : null} />
+              {role === "Institute Student" ? (
+                <>
+                  <DetailItem label={translations.educationLevel} value={studentProfile?.education_level} />
+                  <DetailItem label={translations.talent} value={studentProfile?.talent} />
+                  <DetailItem label={translations.parentPhone} value={studentProfile?.parent_phone} />
+                </>
+              ) : (
+                <>
+                  <DetailItem label={translations.universityId} value={studentProfile?.student_university_id} />
+                  <DetailItem label={translations.enrollmentYear} value={studentProfile?.enrollment_year} />
+                  <DetailItem
+                    label={translations.expectedGraduation}
+                    value={studentProfile?.expected_graduation_year || translations.notAvailable}
+                  />
+                  <DetailItem label={translations.universityType} value={studentProfile?.type_of_university} />
+                  <DetailItem
+                    label={translations.location}
+                    value={studentProfile ? `${studentProfile.city}, ${studentProfile.country_of_studying}` : null}
+                  />
+                </>
+              )}
             </SectionCard>
             <SectionCard title={translations.academicJourney}>
               <Timeline>
