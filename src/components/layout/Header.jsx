@@ -80,7 +80,7 @@ const Header = () => {
                   onClick={toggleNotifications}
                   className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-800 transition-colors relative"
                 >
-                  <span className="material-icons text-brand-200">notifications</span>
+                  <span className="material-icons text-accent-400">notifications</span>
                   {notifications.length > 0 && (
                     <span className="absolute top-2 left-2 w-2 h-2 bg-accent-400 rounded-full border-2 border-surface-header"></span>
                   )}

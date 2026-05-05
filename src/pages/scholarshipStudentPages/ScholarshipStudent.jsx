@@ -5,19 +5,19 @@ import { toast } from "react-toastify";
 import StudentLayout from "../../components/layout/StudentLayout";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { 
-  GraduationCap, 
-  MapPin, 
-  Building2, 
-  BookOpen, 
-  Calendar, 
-  Edit3, 
-  Save, 
+import {
+  GraduationCap,
+  MapPin,
+  Building2,
+  BookOpen,
+  Calendar,
+  Edit3,
+  Save,
   X,
   Info,
   Building
 } from "lucide-react";
-import { Loading } from "../../components/ui/Loading";
+import Loading from "../../components/ui/Loading";
 
 const ScholarshipStudent = () => {
   const token = useSelector((state) => state.auth.token);

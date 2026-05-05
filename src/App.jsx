@@ -44,6 +44,7 @@ import "react-toastify/dist/ReactToastify.css";
 import SemesterForm from "./pages/scholarshipStudentPages/SemesterForm";
 import SemestersList from "./pages/scholarshipStudentPages/SemesterList";
 import StudentReport from "./pages/scholarshipStudentPages/StudentReport";
+import StudentLayout from "./components/layout/StudentLayout";
 
 function App() {
   // const userRole = useSelector((state) => state.auth.user.role);
@@ -82,7 +83,7 @@ function App() {
             path="/student/scholarship-student-form"
             element={<ScholarshipStudentForm />}
           />
-          <Route path="/try-report" element={<StudentReport />} />
+          <Route path="/try-report" element={<StudentLayout><StudentReport /></StudentLayout>} />
           <Route path="/try-report-list" element={<StudentReportList />} />
           <Route path="/universityDetails" element={<UniversityDetails />} />
           <Route path="/semester-list" element={<SemestersList />} />

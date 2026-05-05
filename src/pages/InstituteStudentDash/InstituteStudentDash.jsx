@@ -3,12 +3,12 @@ import { useSelector } from "react-redux";
 import StudentLayout from "../../components/layout/StudentLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { 
-  GraduationCap, 
-  FileText, 
-  Trophy, 
-  BookOpen, 
-  PlusCircle, 
+import {
+  GraduationCap,
+  FileText,
+  Trophy,
+  BookOpen,
+  PlusCircle,
   ChevronLeft,
   Activity,
   Award,
@@ -45,8 +45,8 @@ const InstituteStudentDash = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="flex items-center justify-center h-screen bg-neutral-100 dark:bg-brand-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
       </div>
     );
   }
@@ -54,38 +54,38 @@ const InstituteStudentDash = () => {
   const stats = profileData?.statistics || {};
 
   const statCards = [
-    { title: "الدورات المسجلة", value: stats.courses || 0, icon: BookOpen, color: "text-blue-600", bg: "bg-blue-100/50" },
-    { title: "الشهادات المحصلة", value: stats.certificates || 0, icon: Award, color: "text-emerald-600", bg: "bg-emerald-100/50" },
-    { title: "الإنجازات", value: stats.achievements || 0, icon: Trophy, color: "text-amber-600", bg: "bg-amber-100/50" },
-    { title: "التذاكر النشطة", value: stats.tickets || 0, icon: FileText, color: "text-purple-600", bg: "bg-purple-100/50" },
+    { title: "الدورات المسجلة", value: stats.courses || 0, icon: BookOpen, color: "text-brand-600", bg: "bg-brand-50" },
+    { title: "الشهادات المحصلة", value: stats.certificates || 0, icon: Award, color: "text-success-text", bg: "bg-success-bg" },
+    { title: "الإنجازات", value: stats.achievements || 0, icon: Trophy, color: "text-accent-600", bg: "bg-accent-50" },
+    { title: "التذاكر النشطة", value: stats.tickets || 0, icon: FileText, color: "text-neutral-700", bg: "bg-neutral-100" },
   ];
 
   return (
     <StudentLayout>
       <div className="space-y-8">
-        
+
         {/* Welcome Banner */}
-        <div className="relative overflow-hidden rounded-2xl bg-emerald-600 p-8 text-white shadow-lg shadow-emerald-200 dark:shadow-none">
+        <div className="relative overflow-hidden rounded-2xl bg-brand-800 p-8 text-neutral-50 shadow-lg shadow-brand-200 dark:shadow-none">
           <div className="relative z-10">
-            <h1 className="text-3xl font-bold mb-2">أهلاً بك يا بطل، {user?.name}! 🎓</h1>
-            <p className="text-emerald-100 max-w-md">نحن هنا لندعم رحلتك التعليمية في المعهد. تصفح دوراتك وتابع تقدمك.</p>
+            <h1 className="text-3xl font-bold mb-2">أهلاً بك مجددا، {user?.name}! 🎓</h1>
+            <p className="text-brand-100 max-w-md">نحن هنا لندعم رحلتك التعليمية في المعهد. تصفح دوراتك وتابع تقدمك.</p>
             <div className="mt-6 flex gap-4">
               <Link to="/student/courses">
-                <Button className="bg-white text-emerald-600 hover:bg-emerald-50">
+                <Button className="bg-neutral-50 text-brand-800 hover:bg-brand-50">
                   <BookOpen className="ml-2 w-4 h-4" />
                   عرض دوراتي
                 </Button>
               </Link>
               <Link to="/profile">
-                <Button variant="outline" className="border-emerald-400 text-white hover:bg-emerald-700">
+                <Button variant="ghost" className="border-brand-400 text-neutral-50 hover:bg-brand-700">
                   إعدادات الحساب
                 </Button>
               </Link>
             </div>
           </div>
           {/* Decorative elements */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-emerald-500 rounded-full opacity-20"></div>
-          <div className="absolute bottom-0 right-0 mr-32 -mb-16 w-48 h-48 bg-emerald-700 rounded-full opacity-30"></div>
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-brand-600 rounded-full opacity-20"></div>
+          <div className="absolute bottom-0 right-0 mr-32 -mb-16 w-48 h-48 bg-brand-800 rounded-full opacity-30"></div>
         </div>
 
         {/* Stats Grid */}
@@ -95,8 +95,8 @@ const InstituteStudentDash = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{stat.title}</p>
-                    <h3 className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{stat.value}</h3>
+                    <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{stat.title}</p>
+                    <h3 className="text-2xl font-bold mt-1 text-neutral-900 dark:text-neutral-50">{stat.value}</h3>
                   </div>
                   <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
                     <stat.icon size={24} />
@@ -108,38 +108,38 @@ const InstituteStudentDash = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Quick Navigation */}
             <section>
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Activity className="text-emerald-600" />
+                <Activity className="text-brand-600" />
                 الوصول السريع
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Link to="/student/courses">
-                  <div className="group bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-800 flex flex-col items-center text-center gap-3">
-                    <div className="bg-blue-600 text-white p-3 rounded-full group-hover:scale-110 transition-transform">
+                  <div className="group bg-neutral-50 dark:bg-neutral-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-neutral-200 dark:border-neutral-800 flex flex-col items-center text-center gap-3">
+                    <div className="bg-brand-600 text-neutral-50 p-3 rounded-full group-hover:scale-110 transition-transform">
                       <BookOpen size={24} />
                     </div>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">الدورات التدريبية</span>
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">الدورات التدريبية</span>
                   </div>
                 </Link>
                 <Link to="/student/certificates">
-                  <div className="group bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-800 flex flex-col items-center text-center gap-3">
-                    <div className="bg-emerald-600 text-white p-3 rounded-full group-hover:scale-110 transition-transform">
+                  <div className="group bg-neutral-50 dark:bg-neutral-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-neutral-200 dark:border-neutral-800 flex flex-col items-center text-center gap-3">
+                    <div className="bg-brand-800 text-neutral-50 p-3 rounded-full group-hover:scale-110 transition-transform">
                       <Award size={24} />
                     </div>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">الشهادات</span>
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">الشهادات</span>
                   </div>
                 </Link>
                 <Link to="/student/tickets">
-                  <div className="group bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-gray-800 flex flex-col items-center text-center gap-3">
-                    <div className="bg-purple-600 text-white p-3 rounded-full group-hover:scale-110 transition-transform">
+                  <div className="group bg-neutral-50 dark:bg-neutral-900 p-6 rounded-xl shadow-sm hover:shadow-md transition-all border border-neutral-200 dark:border-neutral-800 flex flex-col items-center text-center gap-3">
+                    <div className="bg-accent-600 text-neutral-900 p-3 rounded-full group-hover:scale-110 transition-transform">
                       <FileText size={24} />
                     </div>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">الدعم الفني</span>
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">الدعم الفني</span>
                   </div>
                 </Link>
               </div>
@@ -154,20 +154,20 @@ const InstituteStudentDash = () => {
               <CardContent>
                 {stats.courses > 0 ? (
                   <div className="space-y-4">
-                      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <BookOpen className="text-blue-600" />
-                          <span className="font-medium">لديك {stats.courses} دورات مسجلة</span>
-                        </div>
-                        <Link to="/student/courses">
-                          <Button variant="ghost" size="sm">عرض الكل</Button>
-                        </Link>
+                    <div className="p-4 bg-neutral-100 dark:bg-neutral-800/50 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <BookOpen className="text-brand-600" />
+                        <span className="font-medium">لديك {stats.courses} دورات مسجلة</span>
                       </div>
+                      <Link to="/student/courses">
+                        <Button variant="ghost" size="sm">عرض الكل</Button>
+                      </Link>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-10">
-                    <BookOpen className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p className="text-gray-500">لا توجد دورات مسجلة حالياً.</p>
+                    <BookOpen className="mx-auto h-12 w-12 text-neutral-300 mb-3" />
+                    <p className="text-neutral-500">لا توجد دورات مسجلة حالياً.</p>
                   </div>
                 )}
               </CardContent>
@@ -177,11 +177,11 @@ const InstituteStudentDash = () => {
           <div className="space-y-6">
             {/* Profile Overview */}
             <Card className="border-none shadow-sm overflow-hidden">
-              <div className="h-20 bg-emerald-100 dark:bg-emerald-900/30"></div>
+              <div className="h-20 bg-brand-100 dark:bg-brand-900/30"></div>
               <CardContent className="relative px-6 pb-6">
                 <div className="absolute -top-10 right-6">
-                  <div className="w-20 h-20 rounded-2xl bg-white p-1 shadow-md">
-                    <div className="w-full h-full rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 overflow-hidden">
+                  <div className="w-20 h-20 rounded-2xl bg-neutral-50 p-1 shadow-md">
+                    <div className="w-full h-full rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 overflow-hidden">
                       {user?.imageUrl ? (
                         <img src={user.imageUrl} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
@@ -191,9 +191,9 @@ const InstituteStudentDash = () => {
                   </div>
                 </div>
                 <div className="pt-12">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{user?.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-                  <div className="mt-4 flex items-center gap-2 text-xs font-medium px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full w-fit">
+                  <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">{user?.name}</h3>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{user?.email}</p>
+                  <div className="mt-4 flex items-center gap-2 text-xs font-medium px-2 py-1 bg-accent-50 text-accent-700 rounded-full w-fit">
                     <GraduationCap size={14} />
                     طالب معهد
                   </div>
@@ -202,18 +202,18 @@ const InstituteStudentDash = () => {
             </Card>
 
             {/* Announcements Placeholder */}
-            <Card className="border-none shadow-sm bg-gray-900 text-white">
+            <Card className="border-none shadow-sm bg-brand-900 text-neutral-50">
               <CardHeader>
-                <CardTitle className="text-base text-white">إعلانات المعهد</CardTitle>
+                <CardTitle className="text-base text-neutral-50">إعلانات المعهد</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-r-2 border-emerald-500 pr-4">
+                <div className="border-r-2 border-brand-400 pr-4">
                   <p className="text-sm font-bold">بداية الفصل الدراسي الجديد</p>
-                  <p className="text-xs text-gray-400">سيتم الإعلان عن المواعيد قريباً</p>
+                  <p className="text-xs text-neutral-400">سيتم الإعلان عن المواعيد قريباً</p>
                 </div>
-                <div className="border-r-2 border-gray-700 pr-4">
+                <div className="border-r-2 border-neutral-700 pr-4">
                   <p className="text-sm font-bold">تحديث نظام الشهادات</p>
-                  <p className="text-xs text-gray-400">يمكنك الآن تحميل شهاداتك بصيغة PDF</p>
+                  <p className="text-xs text-neutral-400">يمكنك الآن تحميل شهاداتك بصيغة PDF</p>
                 </div>
               </CardContent>
             </Card>

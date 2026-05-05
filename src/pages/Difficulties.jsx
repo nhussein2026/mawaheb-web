@@ -4,11 +4,12 @@ import { toast } from "react-toastify";
 import StudentLayout from "../components/layout/StudentLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { 
-  AlertTriangle, 
-  PlusCircle, 
-  Edit3, 
-  Trash2, 
+import Loading from "../components/ui/Loading";
+import {
+  AlertTriangle,
+  PlusCircle,
+  Edit3,
+  Trash2,
   ChevronLeft,
   X,
   MessageCircle,

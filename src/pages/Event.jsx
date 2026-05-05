@@ -4,12 +4,12 @@ import { toast } from "react-toastify";
 import StudentLayout from "../components/layout/StudentLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Loading } from "../components/ui/Loading";
-import { 
-  Calendar, 
-  PlusCircle, 
-  Edit3, 
-  Trash2, 
+import Loading from "../components/ui/Loading";
+import {
+  Calendar,
+  PlusCircle,
+  Edit3,
+  Trash2,
   Image as ImageIcon,
   Search,
   ChevronLeft,

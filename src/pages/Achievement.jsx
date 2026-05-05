@@ -4,12 +4,12 @@ import { toast } from "react-toastify";
 import StudentLayout from "../components/layout/StudentLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Loading } from "../components/ui/Loading";
-import { 
-  Trophy, 
-  PlusCircle, 
-  Edit3, 
-  Trash2, 
+import Loading from "../components/ui/Loading";
+import {
+  Trophy,
+  PlusCircle,
+  Edit3,
+  Trash2,
   Image as ImageIcon,
   Search,
   ChevronLeft,
@@ -231,23 +231,24 @@ const UserAchievementPage = () => {
                         <div className="w-full h-full flex items-center justify-center text-neutral-300"><ImageIcon size={48} /></div>
                       )}
                     </div>
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-lg text-text-primary">{achievement.title}</h3>
-                      <div className="flex gap-1">
-                        <button onClick={() => { setSelectedAchievement(achievement); setFormData({ title: achievement.title, description: achievement.description, category: achievement.category, achievement_image: null }); setShowForm(true); }} className="p-1.5 text-text-muted hover:text-brand-600 transition-colors"><Edit3 size={16} /></button>
-                        <button onClick={() => handleDelete(achievement._id)} className="p-1.5 text-text-muted hover:text-error-text transition-colors"><Trash2 size={16} /></button>
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-lg text-text-primary">{achievement.title}</h3>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setSelectedAchievement(achievement); setFormData({ title: achievement.title, description: achievement.description, category: achievement.category, achievement_image: null }); setShowForm(true); }} className="p-1.5 text-text-muted hover:text-brand-600 transition-colors"><Edit3 size={16} /></button>
+                          <button onClick={() => handleDelete(achievement._id)} className="p-1.5 text-text-muted hover:text-error-text transition-colors"><Trash2 size={16} /></button>
+                        </div>
                       </div>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-accent-600 mb-3 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-100 w-fit uppercase tracking-wider">
+                        <Tag size={10} />
+                        {achievement.category}
+                      </div>
+                      <p className="text-sm text-text-secondary line-clamp-3 leading-relaxed h-15">{achievement.description}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-accent-600 mb-3 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-100 w-fit uppercase tracking-wider">
-                      <Tag size={10} />
-                      {achievement.category}
-                    </div>
-                    <p className="text-sm text-text-secondary line-clamp-3 leading-relaxed h-15">{achievement.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ); })}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 

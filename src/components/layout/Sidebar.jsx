@@ -1,15 +1,15 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  FileText, 
-  BookOpen, 
-  Calendar, 
-  Ticket, 
-  StickyNote, 
-  Trophy, 
-  Award, 
-  AlertTriangle, 
+import {
+  Home,
+  FileText,
+  BookOpen,
+  Calendar,
+  Ticket,
+  StickyNote,
+  Trophy,
+  Award,
+  AlertTriangle,
   CreditCard,
   User,
   List,
@@ -54,7 +54,7 @@ const Sidebar = () => {
 
       <aside
         className={cn(
-          "fixed top-0 right-0 w-72 h-full bg-surface-nav transition-all duration-500 ease-in-out z-40 flex flex-col border-l border-brand-900/50 shadow-2xl",
+          "fixed top-0 right-0 w-72 h-full bg-surface-nav transition-all duration-500 ease-in-out flex flex-col border-l border-brand-900/50 shadow-2xl",
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0 md:static"
         )}
       >
@@ -87,12 +87,12 @@ const Sidebar = () => {
                   {isActive && (
                     <div className="absolute right-0 top-0 bottom-0 w-1 bg-accent-400 rounded-l-full shadow-[0_0_10px_rgba(212,168,67,0.5)]"></div>
                   )}
-                  <Icon 
-                    size={20} 
+                  <Icon
+                    size={20}
                     className={cn(
                       "transition-all duration-300",
                       isActive ? "text-accent-400" : "text-brand-500 group-hover:text-brand-200 group-hover:scale-110"
-                    )} 
+                    )}
                   />
                   <span className={cn(
                     "text-sm transition-all duration-300",

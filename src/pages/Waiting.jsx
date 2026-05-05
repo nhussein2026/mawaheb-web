@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Loading } from "../components/ui/Loading";
 import { GraduationCap, Send, Clock, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -114,7 +113,7 @@ const Waiting = () => {
                     يمكنك إعادة المحاولة أو التواصل مع الدعم الفني.
                   </p>
                 </div>
-                <Button 
+                <Button
                   onClick={() => setRequestStatus("None")}
                   variant="primary"
                   className="w-full h-12 shadow-lg"
@@ -129,11 +128,10 @@ const Waiting = () => {
                     <button
                       key={role}
                       onClick={() => setSelectedRole(role)}
-                      className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 text-right group ${
-                        selectedRole === role
-                          ? "border-brand-600 bg-brand-50 text-brand-900 shadow-lg shadow-brand-900/5 scale-[1.02]"
-                          : "border-border-subtle hover:border-brand-200 hover:bg-neutral-50/50"
-                      }`}
+                      className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 text-right group ${selectedRole === role
+                        ? "border-brand-600 bg-brand-50 text-brand-900 shadow-lg shadow-brand-900/5 scale-[1.02]"
+                        : "border-border-subtle hover:border-brand-200 hover:bg-neutral-50/50"
+                        }`}
                     >
                       <span className={`font-bold transition-colors ${selectedRole === role ? "text-brand-800" : "text-text-secondary group-hover:text-text-primary"}`}>{role}</span>
                       {selectedRole === role ? (

@@ -15,7 +15,7 @@ import {
   Image as ImageIcon,
   GraduationCap
 } from "lucide-react";
-import { Loading } from "../../components/ui/Loading";
+import Loading from "../../components/ui/Loading";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

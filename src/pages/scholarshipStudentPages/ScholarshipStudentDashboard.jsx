@@ -3,13 +3,13 @@ import { useSelector } from "react-redux";
 import StudentLayout from "../../components/layout/StudentLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { 
-  GraduationCap, 
-  FileText, 
-  Trophy, 
-  BookOpen, 
-  Calendar, 
-  PlusCircle, 
+import {
+  GraduationCap,
+  FileText,
+  Trophy,
+  BookOpen,
+  Calendar,
+  PlusCircle,
   ChevronLeft,
   Activity,
   Award,
@@ -17,8 +17,7 @@ import {
   User
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-import { Loading } from "../../components/ui/Loading";
+import Loading from "../../components/ui/Loading";
 
 const ScholarshipStudentDashboard = () => {
   const token = useSelector((state) => state.auth.token);
@@ -70,7 +69,7 @@ const ScholarshipStudentDashboard = () => {
   return (
     <StudentLayout>
       <div className="space-y-8">
-        
+
         {/* Welcome Banner */}
         <div className="relative overflow-hidden rounded-2xl bg-brand-800 p-8 text-brand-50 shadow-sm">
           <div className="relative z-10">
@@ -115,10 +114,10 @@ const ScholarshipStudentDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Quick Actions & Activity */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Quick Actions */}
             <section>
               <h2 className="text-xl font-medium mb-4 flex items-center gap-2 text-text-primary">
@@ -186,7 +185,7 @@ const ScholarshipStudentDashboard = () => {
 
           {/* Sidebar Cards */}
           <div className="space-y-6">
-            
+
             {/* Profile Card */}
             <Card className="border-none shadow-sm overflow-hidden">
               <div className="h-20 bg-brand-100"></div>

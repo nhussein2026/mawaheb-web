@@ -4,17 +4,17 @@ import { toast } from 'react-toastify';
 import StudentLayout from '../components/layout/StudentLayout';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { 
-  StickyNote, 
-  PlusCircle, 
-  Edit3, 
-  Trash2, 
+import {
+  StickyNote,
+  PlusCircle,
+  Edit3,
+  Trash2,
   ChevronLeft,
   X,
   Clock,
   Search
 } from 'lucide-react';
-import { Loading } from '../components/ui/Loading';
+import Loading from '../components/ui/Loading';
 
 const NotePage = () => {
   const [notes, setNotes] = useState([]);

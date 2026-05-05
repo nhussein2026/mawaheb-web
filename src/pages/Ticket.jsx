@@ -4,16 +4,16 @@ import { toast } from "react-toastify";
 import StudentLayout from "../components/layout/StudentLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { 
-  MessageSquare, 
-  PlusCircle, 
-  Clock, 
-  CheckCircle2, 
+import {
+  MessageSquare,
+  PlusCircle,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   ChevronLeft
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Loading } from "../components/ui/Loading";
+import Loading from "../components/ui/Loading";
 
 const Ticket = () => {
   const [tickets, setTickets] = useState([]);
