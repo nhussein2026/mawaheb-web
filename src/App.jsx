@@ -41,6 +41,7 @@ import StudentReport from "./pages/scholarshipStudentPages/StudentReport";
 // Admin & Employee Pages
 import AdminDashboard from "./pages/adminDashboard/AdminDashboard";
 import EmployeeDashboard from "./pages/employeeDashboard/EmployeeDashboard";
+import EmployeeStudentReports from "./pages/employeeDashboard/StudentReports";
 import StudentDetails from "./pages/adminDashboard/StudentDetails";
 import AllUsers from "./pages/adminDashboard/AllUsers";
 import Roles from "./pages/adminDashboard/Roles";
@@ -113,8 +114,12 @@ function App() {
         </Route>
         
         {/* EMPLOYEE ROUTES */}
-        <Route element={<AdminLayout />}>
-          <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+        <Route path="/employee-dashboard" element={<AdminLayout />}>
+          <Route index element={<EmployeeDashboard />} />
+          <Route path="reports" element={<EmployeeStudentReports />} />
+          <Route path="users" element={<AllUsers />} />
+          <Route path="tickets" element={<AdminTickets />} />
+          <Route path="programs" element={<AdminProgramsHub />} />
         </Route>
 
         {/* Student details used by admin */}

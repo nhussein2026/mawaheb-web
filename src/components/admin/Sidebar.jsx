@@ -24,14 +24,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const isAdmin = role === "Admin";
 
   const navigation = [
-    { name: "نظرة عامة", href: "/admin-dashboard", icon: LayoutDashboard, roles: ["Admin", "Employee"] },
+    { name: "نظرة عامة", href: isAdmin ? "/admin-dashboard" : "/employee-dashboard", icon: LayoutDashboard, roles: ["Admin", "Employee"] },
     { name: "التحليلات", href: "/admin-dashboard/analytics", icon: BarChart3, roles: ["Admin"] },
-    { name: "المستخدمون", href: "/admin-dashboard/users", icon: Users, roles: ["Admin", "Employee"] },
+    { name: "المستخدمون", href: isAdmin ? "/admin-dashboard/users" : "/employee-dashboard/users", icon: Users, roles: ["Admin", "Employee"] },
     { name: "طلبات الأدوار", href: "/admin-dashboard/role-requests", icon: UserPlus, roles: ["Admin"] },
     { name: "الأدوار والصلاحيات", href: "/admin-dashboard/roles", icon: ShieldAlert, roles: ["Admin"] },
-    { name: "تقارير الطلاب", href: "/admin-dashboard/reports", icon: FileText, roles: ["Admin", "Employee"] },
-    { name: "التذاكر", href: "/admin-dashboard/tickets", icon: MessageSquare, roles: ["Admin", "Employee"] },
-    { name: "البرامج والمحتوى", href: "/admin-dashboard/programs", icon: Layers, roles: ["Admin", "Employee"] },
+    { name: "تقارير الطلاب", href: isAdmin ? "/admin-dashboard/reports" : "/employee-dashboard/reports", icon: FileText, roles: ["Admin", "Employee"] },
+    { name: "التذاكر", href: isAdmin ? "/admin-dashboard/tickets" : "/employee-dashboard/tickets", icon: MessageSquare, roles: ["Admin", "Employee"] },
+    { name: "البرامج والمحتوى", href: isAdmin ? "/admin-dashboard/programs" : "/employee-dashboard/programs", icon: Layers, roles: ["Admin", "Employee"] },
     { name: "السجلات المالية", href: "/admin-dashboard/financial", icon: Wallet, roles: ["Admin"] },
     { name: "عمليات المنح", href: "/admin-dashboard/scholarship", icon: BookMarked, roles: ["Admin"] },
   ];
@@ -64,7 +64,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       >
         <div className={`flex h-16 shrink-0 items-center justify-between border-b ${borderColor} px-5`}>
           <Link
-            to="/admin-dashboard"
+            to={isAdmin ? "/admin-dashboard" : "/employee-dashboard"}
             className="flex items-center gap-2.5"
             onClick={() => setSidebarOpen(false)}
           >
@@ -95,7 +95,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
           {allowedNav.map((item) => {
             const isActive =
               location.pathname === item.href ||
-              (item.href !== "/admin-dashboard" && location.pathname.startsWith(item.href));
+              (!["/admin-dashboard", "/employee-dashboard"].includes(item.href) && location.pathname.startsWith(item.href));
             return (
               <Link
                 key={item.name}

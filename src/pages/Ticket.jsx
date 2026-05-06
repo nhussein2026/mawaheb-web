@@ -26,14 +26,15 @@ const Ticket = () => {
 
   const fetchTickets = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/ticket`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets/my`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       if (!response.ok) throw new Error("Network response was not ok");
-      const data = await response.json();
-      setTickets(Array.isArray(data) ? data : []);
+      const json = await response.json();
+      // New structure: { success: true, data: [...] }
+      setTickets(json.success && Array.isArray(json.data) ? json.data : []);
     } catch (error) {
       console.error("Error fetching tickets:", error);
       toast.error("فشل في تحميل التذاكر");

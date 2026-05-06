@@ -21,8 +21,14 @@ export default function AdminStudentReports() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error("تعذّر تحميل التقارير");
-        const data = await response.json();
-        setReports(Array.isArray(data.studentReports) ? data.studentReports : []);
+        const json = await response.json();
+
+        // Handle standardized { success, data } or legacy { studentReports }
+        const data = json.success && Array.isArray(json.data)
+          ? json.data
+          : (Array.isArray(json.studentReports) ? json.studentReports : []);
+
+        setReports(data);
       } catch (e) {
         console.error(e);
         setError(e.message);
@@ -38,7 +44,7 @@ export default function AdminStudentReports() {
       <div className="space-y-6">
         <AdminPageHeader
           title="تقارير الطلاب"
-          description="جميع تقارير الطلاب المسجّلة عبر المسار `/allReports`. يمكنك فتح عرض البطاقات من الرابط أدناه."
+          description="جميع تقارير الطلاب المسجّلة عبر المسار `/reports`. يمكنك فتح عرض البطاقات من الرابط أدناه."
           actions={
             <Link
               to="/try-report-list"

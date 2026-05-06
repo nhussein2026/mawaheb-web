@@ -24,14 +24,14 @@ const TicketList = () => {
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/user/ticket`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets/my`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const data = await response.json();
-        // Assuming data is either an array or an object with tickets
-        setTickets(Array.isArray(data) ? data : data.tickets || []);
+        const json = await response.json();
+        // New structure: { success: true, data: [...] }
+        setTickets(json.success && Array.isArray(json.data) ? json.data : []);
       } catch (error) {
         console.error("Error fetching tickets:", error);
       } finally {

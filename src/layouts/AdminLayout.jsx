@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/admin/Sidebar";
 import Header from "../components/admin/Header";
 
@@ -9,6 +9,12 @@ const AdminLayout = () => {
   const user = useSelector((state) => state.auth?.user || {});
   const role = user?.role || "Employee";
   const isAdmin = role === "Admin";
+  const location = useLocation();
+
+  // Redirect employees away from the admin-only root dashboard
+  if (!isAdmin && location.pathname === "/admin-dashboard") {
+    return <Navigate to="/employee-dashboard" replace />;
+  }
 
   // Creative differentiation: Employee gets clean white card background, Admin gets standard parchment
   const pageBg = isAdmin ? "bg-surface-page" : "bg-neutral-50";

@@ -12,6 +12,13 @@ const ROLES = [
   "Scholarship Student",
 ];
 
+const ROLE_LABELS = {
+  "Employee": "موظف",
+  "Admin": "مسؤول نظام",
+  "Institute Student": "طالب معهد",
+  "Scholarship Student": "طالب منحة",
+};
+
 const Waiting = () => {
   const token = useSelector((state) => state.auth.token);
   const user = useSelector((state) => state.auth.user);
@@ -71,8 +78,8 @@ const Waiting = () => {
         <Card className="border-none shadow-2xl overflow-hidden rounded-3xl bg-surface-card">
           <CardHeader className="bg-gradient-to-br from-brand-900 to-brand-800 p-8 text-white relative">
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent-400/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-            <CardTitle className="text-2xl font-bold relative z-10">تحديد نوع العضوية</CardTitle>
-            <CardDescription className="text-brand-200 mt-2 relative z-10 leading-relaxed opacity-90">
+            <CardTitle className="text-2xl font-bold text-white relative z-10">تحديد نوع العضوية</CardTitle>
+            <CardDescription className="text-brand-100 mt-2 text-sm relative z-10 leading-relaxed opacity-90">
               يرجى اختيار نوع العضوية التي ترغب في الحصول عليها ليتم مراجعتها من قبل الإدارة.
             </CardDescription>
           </CardHeader>
@@ -90,7 +97,7 @@ const Waiting = () => {
                 <div>
                   <h3 className="text-xl font-bold text-text-primary">طلبك قيد المراجعة</h3>
                   <p className="text-text-secondary mt-3 leading-relaxed">
-                    لقد قمت بطلب الانضمام كـ <span className="font-bold text-brand-600">[{requestedRole}]</span>.
+                    لقد قمت بطلب الانضمام كـ <span className="font-bold text-brand-600">[{ROLE_LABELS[requestedRole] || requestedRole}]</span>.
                     سيقوم أحد المشرفين بمراجعة طلبك وتفعيل حسابك قريباً.
                   </p>
                 </div>
@@ -109,7 +116,7 @@ const Waiting = () => {
                 <div>
                   <h3 className="text-xl font-bold text-text-primary">تم رفض الطلب</h3>
                   <p className="text-text-secondary mt-3 leading-relaxed">
-                    نعتذر، لم يتم الموافقة على طلب انضمامك كـ <span className="font-bold">[{requestedRole}]</span>.
+                    نعتذر، لم يتم الموافقة على طلب انضمامك كـ <span className="font-bold">[{ROLE_LABELS[requestedRole] || requestedRole}]</span>.
                     يمكنك إعادة المحاولة أو التواصل مع الدعم الفني.
                   </p>
                 </div>
@@ -133,7 +140,9 @@ const Waiting = () => {
                         : "border-border-subtle hover:border-brand-200 hover:bg-neutral-50/50"
                         }`}
                     >
-                      <span className={`font-bold transition-colors ${selectedRole === role ? "text-brand-800" : "text-text-secondary group-hover:text-text-primary"}`}>{role}</span>
+                      <span className={`font-bold transition-colors ${selectedRole === role ? "text-brand-800" : "text-text-secondary group-hover:text-text-primary"}`}>
+                        {ROLE_LABELS[role] || role}
+                      </span>
                       {selectedRole === role ? (
                         <CheckCircle2 className="w-6 h-6 text-brand-600 animate-in zoom-in duration-300" />
                       ) : (

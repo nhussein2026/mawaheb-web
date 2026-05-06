@@ -18,7 +18,7 @@ const CreateTicket = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/ticket`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -56,7 +56,9 @@ const Header = ({ setSidebarOpen }) => {
   const wrapRef = useRef(null);
 
   const titleFromPath = () => {
-    const seg = location.pathname.replace("/admin-dashboard", "").replace(/^\//, "");
+    const isEmployeePath = location.pathname.startsWith("/employee-dashboard");
+    const prefix = isEmployeePath ? "/employee-dashboard" : "/admin-dashboard";
+    const seg = location.pathname.replace(prefix, "").replace(/^\//, "");
     if (!seg) return PATH_TITLES_AR[""];
     const key = seg.split("/")[0];
     return PATH_TITLES_AR[key] || key;
@@ -66,7 +68,8 @@ const Header = ({ setSidebarOpen }) => {
     e.preventDefault();
     const trimmed = q.trim();
     if (!trimmed) return;
-    navigate(`/admin-dashboard/users?search=${encodeURIComponent(trimmed)}`);
+    const prefix = location.pathname.startsWith("/employee-dashboard") ? "/employee-dashboard" : "/admin-dashboard";
+    navigate(`${prefix}/users?search=${encodeURIComponent(trimmed)}`);
   };
 
   const pullRoleRequests = useCallback(async () => {
@@ -120,11 +123,11 @@ const Header = ({ setSidebarOpen }) => {
   }, [pullRoleRequests, applyRoleRequestList]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    if (!token || user?.role !== "Admin") return undefined;
     pollRoleRequests();
     const interval = setInterval(pollRoleRequests, 90_000);
     return () => clearInterval(interval);
-  }, [token, pollRoleRequests]);
+  }, [token, user?.role, pollRoleRequests]);
 
   useEffect(() => {
     const onRefresh = () => {
@@ -208,13 +211,13 @@ const Header = ({ setSidebarOpen }) => {
           >
             <span className="sr-only">التنبيهات</span>
             <Bell className="h-5 w-5" aria-hidden="true" />
-            {pendingRoleCount > 0 ? (
+            {user?.role === "Admin" && pendingRoleCount > 0 ? (
               <span className="absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-400 px-1 text-[10px] font-medium text-accent-900 ring-2 ring-surface-header">
                 {pendingRoleCount > 9 ? "9+" : pendingRoleCount}
               </span>
             ) : null}
           </button>
-          {notificationsOpen && (
+          {notificationsOpen && user?.role === "Admin" && (
             <div className={panelClass} role="menu">
               <div className="border-b-[0.5px] border-border-subtle px-4 py-3">
                 <p className="text-sm font-medium text-text-primary">التنبيهات</p>

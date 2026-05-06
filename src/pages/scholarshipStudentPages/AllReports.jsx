@@ -24,7 +24,7 @@ const AllReports = () => {
     const fetchReports = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/allReports`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/reports`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -34,10 +34,11 @@ const AllReports = () => {
           throw new Error('Failed to fetch reports');
         }
 
-        const data = await response.json();
-        if (data.studentReports) {
-          setReports(data.studentReports);
-        }
+        const json = await response.json();
+        const data = json.success && Array.isArray(json.data) 
+          ? json.data 
+          : (json.studentReports || []);
+        setReports(data);
       } catch (error) {
         console.error('Error fetching reports:', error);
       } finally {

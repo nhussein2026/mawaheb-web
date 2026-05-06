@@ -23,6 +23,18 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
 } from "recharts";
+import {
+  BookOpen,
+  Award,
+  FileText,
+  AlertTriangle,
+  Calendar,
+  Wallet,
+  Ticket,
+  Star,
+  TrendingUp,
+  BarChart3,
+} from "lucide-react";
 
 // ─── Category Config ────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -30,118 +42,128 @@ const CATEGORIES = [
     key: "courses",
     label: "الدورات",
     countField: "courseCount",
-    color: "#6366f1",
-    icon: "📚",
+    color: "var(--color-brand-600)",
+    bg: "var(--color-brand-50)",
+    icon: BookOpen,
   },
   {
     key: "certificates",
     label: "الشهادات",
     countField: "certificateCount",
-    color: "#10b981",
-    icon: "🏆",
+    color: "var(--color-award-text)",
+    bg: "var(--color-award-bg)",
+    icon: Award,
   },
   {
     key: "reports",
     label: "التقارير",
     countField: "reportCount",
-    color: "#f59e0b",
-    icon: "📋",
+    color: "var(--color-brand-400)",
+    bg: "var(--color-brand-50)",
+    icon: FileText,
   },
   {
     key: "difficulties",
     label: "الصعوبات",
     countField: "difficultyCount",
-    color: "#ef4444",
-    icon: "⚠️",
+    color: "var(--color-error-text)",
+    bg: "var(--color-error-bg)",
+    icon: AlertTriangle,
   },
   {
     key: "events",
     label: "الفعاليات",
     countField: "eventCount",
-    color: "#8b5cf6",
-    icon: "🎯",
+    color: "var(--color-accent-400)",
+    bg: "var(--color-accent-50)",
+    icon: Calendar,
   },
   {
     key: "financialReports",
     label: "التقارير المالية",
     countField: "financialReportCount",
-    color: "#14b8a6",
-    icon: "💰",
+    color: "var(--color-success-text)",
+    bg: "var(--color-success-bg)",
+    icon: Wallet,
   },
   {
     key: "tickets",
     label: "التذاكر",
     countField: "ticketCount",
-    color: "#f97316",
-    icon: "🎫",
+    color: "var(--color-warning-text)",
+    bg: "var(--color-warning-bg)",
+    icon: Ticket,
   },
   {
     key: "userAchievements",
     label: "الإنجازات",
     countField: "achievementCount",
-    color: "#ec4899",
-    icon: "⭐",
+    color: "var(--color-accent-600)",
+    bg: "var(--color-accent-50)",
+    icon: Star,
   },
 ];
 
 // ─── Tooltip Styles ──────────────────────────────────────────────────────────
 const tooltipStyles = {
   borderRadius: "var(--radius-md)",
-  border: "0.5px solid var(--color-border-subtle)",
-  background: "var(--color-surface-card)",
+  border: "0.5px solid var(--border-subtle)",
+  background: "var(--surface-card)",
   direction: "rtl",
+  fontSize: "12px",
+  color: "var(--text-primary)",
 };
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 const Skeleton = ({ className = "" }) => (
   <div
-    className={`animate-pulse rounded bg-gray-200 dark:bg-gray-700 ${className}`}
+    className={`animate-pulse rounded bg-[var(--color-neutral-200)] ${className}`}
   />
 );
 
 // ─── Stat Card ───────────────────────────────────────────────────────────────
-const StatCard = ({ label, count, icon, color, loading, rank }) => (
+const StatCard = ({ label, count, icon: Icon, color, bg, loading, rank }) => (
   <div
     className="relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-md"
     style={{
-      borderColor: `${color}30`,
-      background: `linear-gradient(135deg, ${color}08 0%, transparent 60%)`,
+      borderColor: "var(--border-subtle)",
+      background: "var(--surface-card)",
     }}
   >
     {/* rank badge */}
     {rank === 1 && (
-      <span className="absolute left-3 top-3 text-xs font-bold text-amber-500">
+      <div className="absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-accent-50)] text-[10px] font-bold text-[var(--color-accent-600)] border border-[var(--color-accent-200)]">
         #1
-      </span>
+      </div>
     )}
     <div className="flex items-start justify-between gap-3" dir="rtl">
       <div className="flex flex-col gap-1">
         <span
-          className="text-xs font-medium uppercase tracking-widest"
-          style={{ color }}
+          className="text-[11px] font-medium uppercase tracking-[0.07em]"
+          style={{ color: "var(--text-muted)" }}
         >
           {label}
         </span>
         {loading ? (
           <Skeleton className="h-8 w-20" />
         ) : (
-          <span className="text-3xl font-black tabular-nums text-text-primary">
-            {count.toLocaleString("ar-EG")}
+          <span className="text-2xl font-black tabular-nums text-[var(--text-primary)]">
+            {count.toLocaleString("en-US")}
           </span>
         )}
       </div>
       <div
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl"
-        style={{ background: `${color}18` }}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: bg, color: color }}
       >
-        {icon}
+        <Icon size={20} />
       </div>
     </div>
   </div>
 );
 
 // ─── Top Users Table ──────────────────────────────────────────────────────────
-const TopUsersTable = ({ users, countField, color, loading }) => {
+const TopUsersTable = ({ users, countField, color, bg, loading }) => {
   if (loading) {
     return (
       <div className="space-y-2">
@@ -162,30 +184,30 @@ const TopUsersTable = ({ users, countField, color, loading }) => {
     <div className="overflow-x-auto">
       <table className="w-full text-sm" dir="rtl">
         <thead>
-          <tr className="border-b text-right text-xs text-text-secondary">
-            <th className="pb-2 pr-2 font-medium">#</th>
-            <th className="pb-2 font-medium">الاسم</th>
-            <th className="pb-2 font-medium">البريد</th>
-            <th className="pb-2 text-left font-medium">العدد</th>
+          <tr className="border-b border-[var(--border-subtle)] text-right text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--text-muted)]">
+            <th className="pb-3 pr-2">#</th>
+            <th className="pb-3">الاسم</th>
+            <th className="pb-3">البريد</th>
+            <th className="pb-3 text-left">العدد</th>
           </tr>
         </thead>
         <tbody>
           {users.slice(0, 5).map((u, i) => (
             <tr
               key={u._id}
-              className="border-b border-dashed last:border-0 hover:bg-surface-hover"
+              className="border-b border-dashed border-[var(--border-subtle)] last:border-0 hover:bg-[var(--color-brand-50)] transition-colors"
             >
-              <td className="py-2 pr-2 text-text-secondary">{i + 1}</td>
-              <td className="py-2 font-medium text-text-primary">
+              <td className="py-3 pr-2 text-[var(--text-secondary)]">{i + 1}</td>
+              <td className="py-3 font-medium text-[var(--text-primary)]">
                 {u.name || "—"}
               </td>
-              <td className="py-2 text-text-secondary">{u.email || "—"}</td>
-              <td className="py-2 text-left">
+              <td className="py-3 text-[var(--text-secondary)]">{u.email || "—"}</td>
+              <td className="py-3 text-left">
                 <span
-                  className="inline-block rounded-full px-2 py-0.5 text-xs font-bold"
-                  style={{ background: `${color}20`, color }}
+                  className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  style={{ background: bg, color: color }}
                 >
-                  {(u[countField] || 0).toLocaleString("ar-EG")}
+                  {(u[countField] || 0).toLocaleString("en-US")}
                 </span>
               </td>
             </tr>
@@ -289,7 +311,7 @@ export default function Analytics() {
 
       {/* Error Banner */}
       {error && (
-        <div className="rounded-md border-e-[3px] border-e-red-400 bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <div className="rounded-md border-e-[3px] border-e-[var(--color-error-border)] bg-[var(--color-error-bg)] px-4 py-3 text-sm text-[var(--color-error-text)]">
           {error}
           <button
             onClick={fetchAll}
@@ -301,31 +323,33 @@ export default function Analytics() {
       )}
 
       {/* Grand Total Banner */}
-      <div className="flex items-center justify-between rounded-2xl border border-indigo-200 bg-gradient-to-l from-indigo-50 to-transparent px-6 py-4 dark:border-indigo-800 dark:from-indigo-950">
+      <div className="flex items-center justify-between rounded-2xl border border-[var(--color-brand-100)] bg-gradient-to-l from-[var(--color-brand-50)] to-transparent px-6 py-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-indigo-500">
-            إجمالي التفاعلات
+          <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--color-brand-600)]">
+            إجمالي التفاعلات عبر المنصة
           </p>
           {loading ? (
             <Skeleton className="mt-1 h-9 w-32" />
           ) : (
-            <p className="text-4xl font-black tabular-nums text-indigo-700 dark:text-indigo-300">
-              {grandTotal.toLocaleString("ar-EG")}
+            <p className="text-4xl font-black tabular-nums text-[var(--color-brand-800)]">
+              {grandTotal.toLocaleString("en-US")}
             </p>
           )}
         </div>
-        <div className="text-5xl opacity-20">📊</div>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-brand-100)] text-[var(--color-brand-600)]">
+          <BarChart3 size={32} />
+        </div>
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex gap-1 rounded-xl border bg-surface-card p-1">
+      <div className="flex gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${activeTab === t.key
-                ? "bg-indigo-600 text-white shadow"
-                : "text-text-secondary hover:text-text-primary"
+            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${activeTab === t.key
+                ? "bg-[var(--color-brand-600)] text-[var(--text-inverse)] shadow-sm"
+                : "text-[var(--text-secondary)] hover:bg-[var(--color-brand-50)]"
               }`}
           >
             {t.label}
@@ -344,6 +368,7 @@ export default function Analytics() {
                 label={cat.label}
                 icon={cat.icon}
                 color={cat.color}
+                bg={cat.bg}
                 count={categoryData[cat.key]?.total ?? 0}
                 loading={loading}
                 rank={i + 1}
@@ -427,9 +452,9 @@ export default function Analytics() {
                     <Radar
                       name="الإجمالي"
                       dataKey="A"
-                      stroke="#6366f1"
-                      fill="#6366f1"
-                      fillOpacity={0.25}
+                      stroke="var(--color-brand-600)"
+                      fill="var(--color-brand-600)"
+                      fillOpacity={0.2}
                     />
                     <Tooltip contentStyle={tooltipStyles} />
                   </RadarChart>
@@ -449,26 +474,26 @@ export default function Analytics() {
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${activeCategory === cat.key
-                    ? "border-transparent text-white shadow-md"
-                    : "border-border text-text-secondary hover:border-current"
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all ${activeCategory === cat.key
+                    ? "border-transparent text-[var(--text-inverse)] shadow-sm"
+                    : "border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--color-brand-400)]"
                   }`}
                 style={
                   activeCategory === cat.key
                     ? { background: cat.color }
-                    : { color: cat.color }
+                    : { "--hover-color": cat.color }
                 }
               >
-                <span>{cat.icon}</span>
+                <cat.icon size={14} />
                 {cat.label}
                 <span
-                  className="rounded-full px-1.5 py-0.5 text-[10px]"
+                  className="rounded-full px-2 py-0.5 text-[10px]"
                   style={{
                     background:
-                      activeCategory === cat.key ? "rgba(255,255,255,0.25)" : `${cat.color}18`,
+                      activeCategory === cat.key ? "rgba(255,255,255,0.2)" : cat.bg,
                   }}
                 >
-                  {(categoryData[cat.key]?.total ?? 0).toLocaleString("ar-EG")}
+                  {(categoryData[cat.key]?.total ?? 0).toLocaleString("en-US")}
                 </span>
               </button>
             ))}
@@ -478,15 +503,15 @@ export default function Analytics() {
           <div className="grid grid-cols-3 gap-3">
             {[
               {
-                label: "الإجمالي",
-                value: (categoryData[activeCategory]?.total ?? 0).toLocaleString("ar-EG"),
+                label: "إجمالي التفاعلات",
+                value: (categoryData[activeCategory]?.total ?? 0).toLocaleString("en-US"),
               },
               {
-                label: "عدد المستخدمين",
-                value: activeUsers.length.toLocaleString("ar-EG"),
+                label: "المستخدمون النشطون",
+                value: activeUsers.length.toLocaleString("en-US"),
               },
               {
-                label: "المتوسط لكل مستخدم",
+                label: "المتوسط / مستخدم",
                 value: activeUsers.length
                   ? (
                     (categoryData[activeCategory]?.total ?? 0) /
@@ -497,10 +522,9 @@ export default function Analytics() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="rounded-xl border p-4 text-center"
-                style={{ borderColor: `${activeCat?.color}30` }}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 text-center"
               >
-                <p className="text-xs text-text-secondary">{item.label}</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--text-muted)]">{item.label}</p>
                 {loading ? (
                   <Skeleton className="mx-auto mt-1 h-7 w-16" />
                 ) : (
@@ -518,8 +542,9 @@ export default function Analytics() {
           {/* Top Users Bar Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                أعلى المستخدمين — {activeCat?.icon} {activeCat?.label}
+              <CardTitle className="flex items-center gap-2">
+                <activeCat.icon size={20} className="text-[var(--color-brand-600)]" />
+                أعلى المستخدمين — {activeCat?.label}
               </CardTitle>
               <CardDescription>
                 المستخدمون الخمسة الأوائل حسب العدد
@@ -579,8 +604,9 @@ export default function Analytics() {
           {/* Full Users Table */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                جدول المستخدمين — {activeCat?.icon} {activeCat?.label}
+              <CardTitle className="flex items-center gap-2">
+                <activeCat.icon size={20} className="text-[var(--color-brand-600)]" />
+                جدول المستخدمين — {activeCat?.label}
               </CardTitle>
               <CardDescription>
                 جميع المستخدمين مرتبين تنازلياً
@@ -591,6 +617,7 @@ export default function Analytics() {
                 users={sortedUsers}
                 countField={activeCat?.countField}
                 color={activeCat?.color}
+                bg={activeCat?.bg}
                 loading={loading}
               />
             </CardContent>
