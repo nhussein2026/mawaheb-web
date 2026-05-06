@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import StudentLayout from '../components/layout/StudentLayout';
+
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { MessageSquare, Send, ChevronRight } from 'lucide-react';
@@ -41,7 +41,7 @@ const CreateTicket = () => {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="flex items-center gap-2 text-text-muted hover:text-brand-600 transition-colors cursor-pointer" onClick={() => navigate(-1)}>
           <ChevronRight size={20} />
@@ -100,7 +100,7 @@ const CreateTicket = () => {
           </CardContent>
         </Card>
       </div>
-    </StudentLayout>
+    </>
   );
 };
 

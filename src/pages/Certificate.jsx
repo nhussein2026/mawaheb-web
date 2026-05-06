@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import StudentLayout from "../components/layout/StudentLayout";
+
 import { Card, CardContent } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import Loading from "../components/ui/Loading"
@@ -117,7 +117,7 @@ const CertificatePage = () => {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
           <div>
@@ -222,7 +222,7 @@ const CertificatePage = () => {
           </div>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 };
 

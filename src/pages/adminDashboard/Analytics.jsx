@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -66,7 +66,7 @@ export default function Analytics() {
   }, [token]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="التحليلات"
@@ -114,6 +114,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

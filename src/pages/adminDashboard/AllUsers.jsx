@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useLocation, Link } from "react-router-dom";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/DataTable";
@@ -116,7 +116,7 @@ export default function AllUsers() {
     "flex h-10 w-full items-center rounded-md border-[0.5px] border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50";
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="دليل المستخدمين"
@@ -276,6 +276,6 @@ export default function AllUsers() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import StudentLayout from "../../components/layout/StudentLayout";
+
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import {
@@ -79,7 +79,7 @@ const StudentReportPage = () => {
   };
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-8 pb-10">
 
         {/* ══ Hero Header ══ */}
@@ -299,7 +299,7 @@ const StudentReportPage = () => {
           )}
         </div>
       </div>
-    </StudentLayout>
+    </>
   );
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/DataTable";
@@ -34,7 +34,7 @@ export default function AdminStudentReports() {
   }, [token]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="تقارير الطلاب"
@@ -98,6 +98,6 @@ export default function AdminStudentReports() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

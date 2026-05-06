@@ -4,7 +4,7 @@ import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { UserCheck, UserX, Clock, User, Mail, Shield } from "lucide-react";
 import { toast } from "react-toastify";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { formatRoleAr } from "../../components/admin/adminCopy";
 import { dispatchRoleRequestsRefresh } from "../../components/admin/adminRoleRequestEvents";
@@ -73,19 +73,19 @@ export default function RoleRequestManager() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="flex min-h-[40vh] items-center justify-center">
           <div
             className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600"
             aria-hidden="true"
           />
         </div>
-      </AdminLayout>
+      </>
     );
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="طلبات تعديل الأدوار"
@@ -162,6 +162,6 @@ export default function RoleRequestManager() {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

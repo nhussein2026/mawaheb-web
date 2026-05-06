@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
 import {
   Home,
@@ -23,30 +24,39 @@ import { cn } from "../../utils/cn";
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const user = useSelector((state) => state.auth?.user || {});
+  const role = user?.role || "Institute Student";
+  
+  const isScholarship = role === "Scholarship Student";
 
   const links = [
-    { to: "/", label: "الرئيسية", icon: LayoutDashboard },
-    { to: "/student-report", label: "تقرير الطالب", icon: FileText },
-    { to: "/student/courses", label: "الدورات التدريبية", icon: BookOpen },
-    { to: "/student/events", label: "الفعاليات والأنشطة", icon: Calendar },
-    { to: "/student/tickets", label: "التذاكر والدعم", icon: Ticket },
-    { to: "/notes", label: "الملاحظات", icon: StickyNote },
-    { to: "/student/achievements", label: "إنجازاتي", icon: Trophy },
-    { to: "/student/certificates", label: "الشهادات المهنية", icon: Award },
-    { to: "/student/difficulties", label: "الصعوبات والتحديات", icon: AlertTriangle },
-    { to: "/student/financial-report", label: "التقرير المالي", icon: CreditCard },
-    { to: "/semester-list", label: "السجل الأكاديمي", icon: List },
-    {
-      to: "/student/scholarship-student-form",
-      label: "بيانات المنحة",
-      icon: User,
-    },
+    { to: "/", label: "الرئيسية", icon: LayoutDashboard, roles: ["Scholarship Student", "Institute Student", "User"] },
+    { to: "/student-report", label: "تقرير الطالب", icon: FileText, roles: ["Scholarship Student"] },
+    { to: "/student/courses", label: "الدورات التدريبية", icon: BookOpen, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/events", label: "الفعاليات والأنشطة", icon: Calendar, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/tickets", label: "التذاكر والدعم", icon: Ticket, roles: ["Scholarship Student", "Institute Student", "User"] },
+    { to: "/notes", label: "الملاحظات", icon: StickyNote, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/achievements", label: "إنجازاتي", icon: Trophy, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/certificates", label: "الشهادات المهنية", icon: Award, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/difficulties", label: "الصعوبات والتحديات", icon: AlertTriangle, roles: ["Scholarship Student"] },
+    { to: "/student/financial-report", label: "التقرير المالي", icon: CreditCard, roles: ["Scholarship Student"] },
+    { to: "/semester-list", label: "السجل الأكاديمي", icon: List, roles: ["Scholarship Student", "Institute Student"] },
+    { to: "/student/scholarship-student-form", label: "بيانات المنحة", icon: User, roles: ["Scholarship Student"] },
   ];
+
+  const allowedLinks = links.filter(item => item.roles.includes(role));
+
+  // Dynamic Theme based on Scholarship vs Institute
+  const toggleBtnBg = isScholarship ? "bg-accent-400 text-accent-900" : "bg-brand-600 text-brand-50";
+  const activeText = isScholarship ? "text-accent-400" : "text-brand-300";
+  const activeBorder = isScholarship ? "bg-accent-400 shadow-[0_0_10px_rgba(212,168,67,0.5)]" : "bg-brand-400 shadow-[0_0_10px_rgba(78,153,99,0.5)]";
+  const logoAccent = isScholarship ? "text-accent-400" : "text-brand-100";
+  const hoverText = isScholarship ? "group-hover:text-accent-200" : "group-hover:text-brand-200";
 
   return (
     <>
       <button
-        className="fixed bottom-6 right-6 z-50 p-3 bg-accent-400 rounded-2xl text-accent-900 shadow-2xl md:hidden hover:scale-110 transition-transform active:scale-95"
+        className={`fixed bottom-6 right-6 z-50 p-3 rounded-2xl shadow-2xl md:hidden hover:scale-110 transition-transform active:scale-95 ${toggleBtnBg}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -59,17 +69,19 @@ const Sidebar = () => {
         )}
       >
         <div className="p-8 border-b border-brand-900/40 flex items-center gap-4 bg-gradient-to-br from-brand-900/20 to-transparent">
-          <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center text-accent-400 shadow-xl shadow-brand-900/40 border border-brand-500/20">
+          <div className={`w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-xl shadow-brand-900/40 border border-brand-500/20 ${logoAccent}`}>
             <Sparkles size={28} fill="currentColor" fillOpacity={0.2} />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-bold text-accent-100 tracking-tight">مؤسسة مواهب</span>
-            <span className="text-[10px] text-brand-400 uppercase tracking-[2px] font-bold">Mawaheb Platform</span>
+            <span className="text-xl font-bold text-brand-50 tracking-tight">مؤسسة مواهب</span>
+            <span className={`text-[10px] uppercase tracking-[2px] font-bold ${activeText}`}>
+              {isScholarship ? "Mawaheb Scholarship" : "Mawaheb Platform"}
+            </span>
           </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
-          {links.map((link) => {
+          {allowedLinks.map((link) => {
             const isActive = location.pathname === link.to;
             const Icon = link.icon;
             return (
@@ -79,19 +91,19 @@ const Sidebar = () => {
                   className={cn(
                     "flex items-center gap-4 py-3 px-4 transition-all duration-300 rounded-xl group relative overflow-hidden",
                     isActive
-                      ? "bg-brand-800 text-accent-400 shadow-lg shadow-brand-900/40"
+                      ? `bg-brand-800 ${activeText} shadow-lg shadow-brand-900/40`
                       : "text-brand-300 hover:bg-brand-800/40 hover:text-brand-100"
                   )}
                   onClick={() => setIsOpen(false)}
                 >
                   {isActive && (
-                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-accent-400 rounded-l-full shadow-[0_0_10px_rgba(212,168,67,0.5)]"></div>
+                    <div className={`absolute right-0 top-0 bottom-0 w-1 rounded-l-full ${activeBorder}`}></div>
                   )}
                   <Icon
                     size={20}
                     className={cn(
                       "transition-all duration-300",
-                      isActive ? "text-accent-400" : "text-brand-500 group-hover:text-brand-200 group-hover:scale-110"
+                      isActive ? activeText : `text-brand-500 ${hoverText} group-hover:scale-110`
                     )}
                   />
                   <span className={cn(

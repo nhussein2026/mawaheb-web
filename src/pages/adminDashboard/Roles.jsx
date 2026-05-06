@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/DataTable";
@@ -74,7 +74,7 @@ export default function Roles() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="الأدوار والصلاحيات"
@@ -201,6 +201,6 @@ export default function Roles() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import StudentLayout from "../../components/layout/StudentLayout";
+
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import {
@@ -221,17 +221,17 @@ const StudentReportList = () => {
 
   if (loading) {
     return (
-      <StudentLayout>
+      <>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
-      </StudentLayout>
+      </>
     );
   }
 
   if (error) {
     return (
-      <StudentLayout>
+      <>
         <div className="max-w-md mx-auto text-center py-20">
           <XCircle className="h-16 w-16 text-error-text mx-auto mb-4" />
           <h2 className="text-xl font-bold text-text-primary mb-2">خطأ في تحميل التقارير</h2>
@@ -240,12 +240,12 @@ const StudentReportList = () => {
             إعادة المحاولة
           </Button>
         </div>
-      </StudentLayout>
+      </>
     );
   }
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
           <div className="text-center md:text-right">
@@ -388,7 +388,7 @@ const StudentReportList = () => {
           </div>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 };
 

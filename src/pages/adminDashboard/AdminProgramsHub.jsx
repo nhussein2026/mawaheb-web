@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { BookOpen, Calendar, Award, StickyNote, AlertTriangle, ArrowUpLeft } from "lucide-react";
@@ -86,7 +86,7 @@ export default function AdminProgramsHub() {
   }, [token]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="البرامج والمحتوى"
@@ -128,6 +128,6 @@ export default function AdminProgramsHub() {
           })}
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 }

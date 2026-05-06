@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import AdminLayout from "../../components/admin/AdminLayout";
+
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { BookMarked, GraduationCap, ListChecks, Building2, FileText, ArrowUpLeft } from "lucide-react";
@@ -34,7 +34,7 @@ const links = [
 
 export default function AdminScholarshipHub() {
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <AdminPageHeader
           title="عمليات المنح"
@@ -81,6 +81,6 @@ export default function AdminScholarshipHub() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </>
   );
 }

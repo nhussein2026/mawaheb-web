@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import StudentLayout from "../../components/layout/StudentLayout";
+
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import {
@@ -50,16 +50,16 @@ const AllReports = () => {
 
   if (loading) {
     return (
-      <StudentLayout>
+      <>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
         </div>
-      </StudentLayout>
+      </>
     );
   }
 
   return (
-    <StudentLayout>
+    <>
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-center bg-surface-card p-6 rounded-2xl shadow-sm border border-border-subtle gap-4">
           <div>
@@ -163,7 +163,7 @@ const AllReports = () => {
           </div>
         )}
       </div>
-    </StudentLayout>
+    </>
   );
 };
 

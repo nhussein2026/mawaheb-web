@@ -17,7 +17,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSelector } from "react-redux";
-import Sidebar from "../../components/layout/Sidebar";
 import Loading from "../../components/ui/Loading";
 import {
   Users,
@@ -520,166 +519,150 @@ const EmployeeDashboard = () => {
     : employees;
 
   return (
-    <div
-      dir="rtl"
-      style={{
-        display: "flex",
-        height: "100vh",
-        backgroundColor: t.surfacePage,
-        fontFamily: "'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif",
-        overflow: "hidden",
-      }}
-    >
-      <Sidebar />
+    <>
+      {/* ── Heading ── */}
+      <div style={{ marginBottom: "32px" }}>
+        <h1 style={{
+          fontSize: "22px", fontWeight: 500, color: t.textPrimary,
+          margin: 0, marginBottom: "6px",
+        }}>
+          لوحة تحكم الموظفين
+        </h1>
+        <p style={{ fontSize: "13px", color: t.textSecondary, margin: 0 }}>
+          مرحباً بك مجدداً. يمكنك هنا مراجعة وإدارة بيانات الموظفين.
+        </p>
+      </div>
 
-      <main style={{ flex: 1, overflowY: "auto", padding: "32px" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-
-          {/* ── Heading ── */}
-          <div style={{ marginBottom: "32px" }}>
-            <h1 style={{
-              fontSize: "22px", fontWeight: 500, color: t.textPrimary,
-              margin: 0, marginBottom: "6px",
-            }}>
-              لوحة تحكم الموظفين
-            </h1>
-            <p style={{ fontSize: "13px", color: t.textSecondary, margin: 0 }}>
-              مرحباً بك مجدداً. يمكنك هنا مراجعة وإدارة بيانات الموظفين.
-            </p>
-          </div>
-
-          {/* ── Stats row ── */}
-          <div style={{
-            display: "flex", gap: "12px", marginBottom: "28px", flexWrap: "wrap",
+      {/* ── Stats row ── */}
+      <div style={{
+        display: "flex", gap: "12px", marginBottom: "28px", flexWrap: "wrap",
+      }}>
+        {[
+          { label: "إجمالي الموظفين", value: meta.total, icon: Users, accent: false },
+          { label: "الصفحة الحالية", value: `${meta.page} / ${meta.pages}`, icon: CalendarDays, accent: false },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} style={{
+            flex: "1 1 160px",
+            backgroundColor: t.surfaceCard,
+            border: `0.5px solid ${accent ? t.borderAccent : t.borderSubtle}`,
+            borderRadius: "10px",
+            padding: "14px 16px",
+            display: "flex", alignItems: "center", gap: "12px",
           }}>
-            {[
-              { label: "إجمالي الموظفين", value: meta.total, icon: Users, accent: false },
-              { label: "الصفحة الحالية", value: `${meta.page} / ${meta.pages}`, icon: CalendarDays, accent: false },
-            ].map(({ label, value, icon: Icon, accent }) => (
-              <div key={label} style={{
-                flex: "1 1 160px",
-                backgroundColor: t.surfaceCard,
-                border: `0.5px solid ${accent ? t.borderAccent : t.borderSubtle}`,
-                borderRadius: "10px",
-                padding: "14px 16px",
-                display: "flex", alignItems: "center", gap: "12px",
-              }}>
-                <div style={{
-                  width: "36px", height: "36px", borderRadius: "8px",
-                  backgroundColor: accent ? t.accent50 : t.brand50,
-                  border: `0.5px solid ${accent ? t.borderAccent : t.brand100}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <Icon size={16} style={{ color: accent ? t.accent600 : t.brand600 }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "18px", fontWeight: 500, color: t.textPrimary }}>{value}</div>
-                  <div style={{ fontSize: "11px", color: t.textMuted, marginTop: "1px" }}>{label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Search ── */}
-          <section style={{ marginBottom: "24px" }}>
-            <div style={{ position: "relative" }}>
-              <Search
-                size={16}
-                style={{
-                  position: "absolute", top: "50%", right: "14px",
-                  transform: "translateY(-50%)",
-                  color: searchFocused ? t.brand600 : t.textMuted,
-                  pointerEvents: "none", transition: "color 0.15s",
-                }}
-              />
-              <input
-                type="text"
-                placeholder="ابحث بالاسم أو البريد الإلكتروني أو المسمى الوظيفي..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                style={{
-                  width: "100%",
-                  padding: "9px 42px 9px 14px",
-                  backgroundColor: t.surfaceCard,
-                  border: `${searchFocused ? "2px" : "0.5px"} solid ${searchFocused ? t.borderBrand : t.borderDefault}`,
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  color: t.textPrimary,
-                  outline: "none",
-                  boxSizing: "border-box",
-                  transition: "border-color 0.15s, border-width 0.1s",
-                  fontFamily: "inherit",
-                  direction: "rtl",
-                }}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  style={{
-                    position: "absolute", top: "50%", left: "10px",
-                    transform: "translateY(-50%)",
-                    backgroundColor: "transparent", border: "none",
-                    cursor: "pointer", color: t.textMuted, padding: "2px",
-                    display: "flex", alignItems: "center",
-                  }}
-                >
-                  <X size={14} />
-                </button>
-              )}
+            <div style={{
+              width: "36px", height: "36px", borderRadius: "8px",
+              backgroundColor: accent ? t.accent50 : t.brand50,
+              border: `0.5px solid ${accent ? t.borderAccent : t.brand100}`,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Icon size={16} style={{ color: accent ? t.accent600 : t.brand600 }} />
             </div>
-          </section>
-
-          {/* ── Content ── */}
-          <div style={{ minHeight: "400px" }}>
-            {loading ? (
-              <Loading variant="inline" message="جاري تحميل بيانات الموظفين..." />
-
-            ) : error ? (
-              <ErrorBanner message={error} onRetry={fetchEmployees} />
-
-            ) : displayEmployees.length > 0 ? (
-              <>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: "16px",
-                }}>
-                  {displayEmployees.map((emp) => (
-                    <EmployeeCard
-                      key={emp._id}
-                      employee={emp}
-                      onSelect={setSelectedEmployee}
-                    />
-                  ))}
-                </div>
-
-                <Pagination
-                  page={meta.page}
-                  pages={meta.pages}
-                  onPageChange={(p) => setCurrentPage(p)}
-                />
-              </>
-            ) : (
-              <div style={{
-                backgroundColor: t.surfaceCard,
-                border: `0.5px solid ${t.borderSubtle}`,
-                borderRadius: "12px",
-              }}>
-                <EmptyState />
-              </div>
-            )}
+            <div>
+              <div style={{ fontSize: "18px", fontWeight: 500, color: t.textPrimary }}>{value}</div>
+              <div style={{ fontSize: "11px", color: t.textMuted, marginTop: "1px" }}>{label}</div>
+            </div>
           </div>
+        ))}
+      </div>
+
+      {/* ── Search ── */}
+      <section style={{ marginBottom: "24px" }}>
+        <div style={{ position: "relative" }}>
+          <Search
+            size={16}
+            style={{
+              position: "absolute", top: "50%", right: "14px",
+              transform: "translateY(-50%)",
+              color: searchFocused ? t.brand600 : t.textMuted,
+              pointerEvents: "none", transition: "color 0.15s",
+            }}
+          />
+          <input
+            type="text"
+            placeholder="ابحث بالاسم أو البريد الإلكتروني أو المسمى الوظيفي..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            style={{
+              width: "100%",
+              padding: "9px 42px 9px 14px",
+              backgroundColor: t.surfaceCard,
+              border: `${searchFocused ? "2px" : "0.5px"} solid ${searchFocused ? t.borderBrand : t.borderDefault}`,
+              borderRadius: "8px",
+              fontSize: "13px",
+              color: t.textPrimary,
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color 0.15s, border-width 0.1s",
+              fontFamily: "inherit",
+              direction: "rtl",
+            }}
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              style={{
+                position: "absolute", top: "50%", left: "10px",
+                transform: "translateY(-50%)",
+                backgroundColor: "transparent", border: "none",
+                cursor: "pointer", color: t.textMuted, padding: "2px",
+                display: "flex", alignItems: "center",
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
-      </main>
+      </section>
+
+      {/* ── Content ── */}
+      <div style={{ minHeight: "400px" }}>
+        {loading ? (
+          <Loading variant="inline" message="جاري تحميل بيانات الموظفين..." />
+
+        ) : error ? (
+          <ErrorBanner message={error} onRetry={fetchEmployees} />
+
+        ) : displayEmployees.length > 0 ? (
+          <>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "16px",
+            }}>
+              {displayEmployees.map((emp) => (
+                <EmployeeCard
+                  key={emp._id}
+                  employee={emp}
+                  onSelect={setSelectedEmployee}
+                />
+              ))}
+            </div>
+
+            <Pagination
+              page={meta.page}
+              pages={meta.pages}
+              onPageChange={(p) => setCurrentPage(p)}
+            />
+          </>
+        ) : (
+          <div style={{
+            backgroundColor: t.surfaceCard,
+            border: `0.5px solid ${t.borderSubtle}`,
+            borderRadius: "12px",
+          }}>
+            <EmptyState />
+          </div>
+        )}
+      </div>
 
       {/* ── Slide-in detail drawer ── */}
       <DetailDrawer
         employee={selectedEmployee}
         onClose={() => setSelectedEmployee(null)}
       />
-    </div>
+    </>
   );
 };
 
