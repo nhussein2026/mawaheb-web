@@ -49,7 +49,12 @@ const Login = () => {
         toast.success("تم تسجيل الدخول بنجاح!");
         const { token, user } = data;
         dispatch(login({ token, user }));
-        if (user?.role === "Admin") {
+        const staffRanks = ["super_admin", "track_supervisor", "trainer", "gate_guard"];
+        if (user?.instituteRole === "student" || user?.role === "Institute Student") {
+          navigate("/institute-portal");
+        } else if (staffRanks.includes(user?.instituteRole)) {
+          navigate("/institute-admin");
+        } else if (user?.role === "Admin") {
           navigate("/admin-dashboard");
         } else {
           navigate("/");

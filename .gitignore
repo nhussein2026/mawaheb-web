@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Yarn install artifacts (node-modules linker; PnP files are no longer used)
+.yarn/install-state.gz
+.pnp.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

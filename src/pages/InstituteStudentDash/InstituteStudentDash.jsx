@@ -69,7 +69,13 @@ const InstituteStudentDash = () => {
           <div className="relative z-10">
             <h1 className="text-3xl font-bold mb-2">أهلاً بك مجددا، {user?.name}! 🎓</h1>
             <p className="text-brand-100 max-w-md">نحن هنا لندعم رحلتك التعليمية في المعهد. تصفح دوراتك وتابع تقدمك.</p>
-            <div className="mt-6 flex gap-4">
+            <div className="mt-6 flex flex-wrap gap-4">
+              <Link to="/institute-portal">
+                <Button className="bg-accent-400 text-brand-900 hover:bg-accent-300">
+                  <GraduationCap className="ml-2 w-4 h-4" />
+                  دخول بوابة المعهد
+                </Button>
+              </Link>
               <Link to="/student/courses">
                 <Button className="bg-neutral-50 text-brand-800 hover:bg-brand-50">
                   <BookOpen className="ml-2 w-4 h-4" />

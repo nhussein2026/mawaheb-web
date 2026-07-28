@@ -55,6 +55,47 @@ import AdminScholarshipHub from "./pages/adminDashboard/AdminScholarshipHub";
 
 import NotFound from "./pages/404";
 
+// Institute Portal (بوابة معهد حضرموت للموهوبين)
+import InstituteAdminLayout from "./layouts/InstituteAdminLayout";
+import InstituteDashboard from "./pages/instituteAdmin/Dashboard";
+import InstituteYearsStudents from "./pages/instituteAdmin/YearsStudents";
+import InstituteMembers from "./pages/instituteAdmin/Members";
+import InstituteAnnouncements from "./pages/instituteAdmin/Announcements";
+import InstituteBehavior from "./pages/instituteAdmin/Behavior";
+import InstituteResults from "./pages/instituteAdmin/Results";
+import InstituteEvaluations from "./pages/instituteAdmin/Evaluations";
+import InstituteCorrespondence from "./pages/instituteAdmin/Correspondence";
+import InstituteBugs from "./pages/instituteAdmin/Bugs";
+import InstituteLeave from "./pages/instituteAdmin/Leave";
+import InstituteIdeas from "./pages/instituteAdmin/Ideas";
+import InstituteFees from "./pages/instituteAdmin/Fees";
+import InstituteCourses from "./pages/instituteAdmin/Courses";
+import InstituteAchievements from "./pages/instituteAdmin/Achievements";
+
+// Institute Student Portal (بوابة الطالب)
+import InstituteStudentLayout from "./layouts/InstituteStudentLayout";
+import ISOverview from "./pages/instituteStudent/Overview";
+import ISAnnouncements from "./pages/instituteStudent/Announcements";
+import ISResults from "./pages/instituteStudent/Results";
+import ISEvaluations from "./pages/instituteStudent/Evaluations";
+import ISCourses from "./pages/instituteStudent/Courses";
+import ISAchievements from "./pages/instituteStudent/Achievements";
+import ISIdeas from "./pages/instituteStudent/Ideas";
+import ISLeave from "./pages/instituteStudent/Leave";
+import ISBehavior from "./pages/instituteStudent/Behavior";
+import ISCorrespondence from "./pages/instituteStudent/Correspondence";
+import ISBugs from "./pages/instituteStudent/Bugs";
+import ISFees from "./pages/instituteStudent/Fees";
+
+// Guardian Portal (بوابة ولي الأمر)
+import GuardianLayout from "./layouts/GuardianLayout";
+import GuardianLogin from "./pages/guardian/GuardianLogin";
+import GuardianOverview from "./pages/guardian/GuardianOverview";
+import GuardianResults from "./pages/guardian/GuardianResults";
+import GuardianEvaluations from "./pages/guardian/GuardianEvaluations";
+import GuardianBehavior from "./pages/guardian/GuardianBehavior";
+import GuardianFees from "./pages/guardian/GuardianFees";
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -125,6 +166,50 @@ function App() {
         {/* Student details used by admin */}
         <Route path="/student/details" element={<AdminLayout />}>
           <Route index element={<StudentDetails />} />
+        </Route>
+
+        {/* INSTITUTE PORTAL ROUTES (بوابة المعهد) — every tab is a real route */}
+        <Route path="/institute-admin" element={<InstituteAdminLayout />}>
+          <Route index element={<InstituteDashboard />} />
+          <Route path="academic" element={<InstituteYearsStudents />} />
+          <Route path="members" element={<InstituteMembers />} />
+          <Route path="notices" element={<InstituteAnnouncements />} />
+          <Route path="bugs" element={<InstituteBugs />} />
+          <Route path="results" element={<InstituteResults />} />
+          <Route path="evaluations" element={<InstituteEvaluations />} />
+          <Route path="courses" element={<InstituteCourses />} />
+          <Route path="correspondence" element={<InstituteCorrespondence />} />
+          <Route path="behavior" element={<InstituteBehavior />} />
+          <Route path="leave" element={<InstituteLeave />} />
+          <Route path="achievements" element={<InstituteAchievements />} />
+          <Route path="ideas" element={<InstituteIdeas />} />
+          <Route path="fees" element={<InstituteFees />} />
+        </Route>
+
+        {/* INSTITUTE STUDENT PORTAL ROUTES (بوابة الطالب) */}
+        <Route path="/institute-portal" element={<InstituteStudentLayout />}>
+          <Route index element={<ISOverview />} />
+          <Route path="announcements" element={<ISAnnouncements />} />
+          <Route path="results" element={<ISResults />} />
+          <Route path="evaluations" element={<ISEvaluations />} />
+          <Route path="courses" element={<ISCourses />} />
+          <Route path="achievements" element={<ISAchievements />} />
+          <Route path="ideas" element={<ISIdeas />} />
+          <Route path="leave" element={<ISLeave />} />
+          <Route path="behavior" element={<ISBehavior />} />
+          <Route path="correspondence" element={<ISCorrespondence />} />
+          <Route path="bugs" element={<ISBugs />} />
+          <Route path="fees" element={<ISFees />} />
+        </Route>
+
+        {/* GUARDIAN PORTAL ROUTES (بوابة ولي الأمر) — read-only, own token */}
+        <Route path="/guardian/login" element={<GuardianLogin />} />
+        <Route path="/guardian" element={<GuardianLayout />}>
+          <Route index element={<GuardianOverview />} />
+          <Route path="results" element={<GuardianResults />} />
+          <Route path="evaluations" element={<GuardianEvaluations />} />
+          <Route path="behavior" element={<GuardianBehavior />} />
+          <Route path="fees" element={<GuardianFees />} />
         </Route>
 
         {/* CATCH ALL */}
