@@ -12,8 +12,8 @@ dist
 dist-ssr
 *.local
 
-# Yarn install artifacts (node-modules linker; PnP files are no longer used)
-.yarn/install-state.gz
+# This project uses npm (package-lock.json). Ignore stray Yarn artifacts.
+.yarn/
 .pnp.*
 
 # Editor directories and files
