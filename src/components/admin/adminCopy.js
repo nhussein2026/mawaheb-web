@@ -2,7 +2,7 @@
 export const ROLE_LABEL_AR = {
   User: "مستخدم",
   Employee: "موظف",
-  Admin: "مسؤول",
+  Admin: "مدير النظام",
   "Institute Student": "طالب معهد",
   "Scholarship Student": "طالب منحة",
 };

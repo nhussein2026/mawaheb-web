@@ -1,49 +1,64 @@
-import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import { ClipboardList, FileBarChart, ScrollText, Bell } from "lucide-react";
-import { Card, CardContent } from "../../components/ui/Card";
+import React from "react";
+import { Card } from "../../components/ui/Card";
+import { Chip } from "../../components/ui/Badge";
+import { Callout, EmptyState } from "../../components/ui/Feedback";
 import StatGrid from "../../components/institute/StatGrid";
 import guardianApi, { getGuardianStudent } from "../../services/api/guardianApi";
 import { levelLabel } from "../../constants/institute";
+import { useResource } from "../../hooks/useResource";
 
 const GuardianOverview = () => {
-  const [counts, setCounts] = useState({});
   const student = getGuardianStudent() || {};
+  const { data, status, reload: load } = useResource(() => guardianApi.getOverview(), [], {
+    initial: {},
+    select: (res) => res?.data?.data?.counts || {},
+  });
+  const counts = data;
 
-  useEffect(() => {
-    guardianApi
-      .getOverview()
-      .then((res) => setCounts(res.data?.data?.counts || {}))
-      .catch(() => toast.error("تعذر تحميل البيانات"));
-  }, []);
+  const facts = [
+    student.academicNumber && `الرقم الأكاديمي ${student.academicNumber}`,
+    student.batch && `الدفعة ${student.batch}`,
+    student.level && levelLabel(student.level),
+  ].filter(Boolean);
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl bg-brand-800 p-6 text-neutral-50">
-        <h1 className="text-xl font-bold">متابعة الطالب: {student.studentName}</h1>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs">
-          {student.academicNumber && (
-            <span className="rounded-full bg-brand-700 px-3 py-1">الرقم الأكاديمي: {student.academicNumber}</span>
-          )}
-          {student.batch && <span className="rounded-full bg-brand-700 px-3 py-1">الدفعة {student.batch}</span>}
-          {student.level && <span className="rounded-full bg-brand-700 px-3 py-1">{levelLabel(student.level)}</span>}
-        </div>
-      </div>
+      <header className="space-y-2">
+        <h1 className="font-display text-[22px] font-semibold leading-[34px] text-text-primary sm:text-heading-2">
+          متابعة <bdi>{student.studentName || "الطالب"}</bdi>
+        </h1>
+        {facts.length ? (
+          <ul className="flex flex-wrap gap-2" aria-label="بيانات الطالب">
+            {facts.map((f) => (
+              <li key={f}>
+                <Chip className="num">{f}</Chip>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </header>
 
-      <StatGrid
-        stats={[
-          { label: "النتائج المتاحة", value: counts.results ?? 0, icon: ClipboardList, tone: "brand" },
-          { label: "تقارير التقويم", value: counts.evaluations ?? 0, icon: FileBarChart, tone: "accent" },
-          { label: "السجلات السلوكية", value: counts.behavior ?? 0, icon: ScrollText, tone: "neutral" },
-          { label: "بانتظار اطلاعك", value: counts.unseen ?? 0, icon: Bell, tone: "danger" },
-        ]}
-      />
-
-      <Card className="border-none shadow-sm">
-        <CardContent className="py-4 text-sm text-text-secondary">
-          استخدم التبويبات بالأعلى لاستعراض النتائج الدراسية وتقارير التقويم والسجل السلوكي وحالة الرسوم.
-        </CardContent>
-      </Card>
+      {status === "failed" ? (
+        <Card>
+          <EmptyState kind="failed" title="تعذّر تحميل بيانات الطالب" onRetry={load} />
+        </Card>
+      ) : (
+        <>
+          {counts.unseen > 0 ? (
+            <Callout tone="info" title={`لديك ${counts.unseen} عناصر جديدة لم تطّلع عليها بعد`}>
+              تجدها في تبويبات النتائج والتقويم والسلوك.
+            </Callout>
+          ) : null}
+          <StatGrid
+            stats={[
+              { label: "النتائج المتاحة", value: counts.results ?? 0, to: "/guardian/results" },
+              { label: "تقارير التقويم", value: counts.evaluations ?? 0, to: "/guardian/evaluations" },
+              { label: "السجلات السلوكية", value: counts.behavior ?? 0, to: "/guardian/behavior" },
+              { label: "بانتظار اطلاعك", value: counts.unseen ?? 0 },
+            ]}
+          />
+        </>
+      )}
     </div>
   );
 };

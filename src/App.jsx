@@ -1,100 +1,102 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 
 // Layouts
 import PublicLayout from "./layouts/PublicLayout";
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import AccountLayout from "./layouts/AccountLayout";
+import Loading from "./components/ui/Loading";
 
 // Public Pages
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Profile from "./components/profile/Profile";
-import ProfileComponent from "./pages/NewProfile";
-import Test from "./components/profile/Profile";
+const Home = lazy(() => import("./pages/Home"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Profile = lazy(() => import("./components/profile/Profile"));
+const ProfileComponent = lazy(() => import("./pages/NewProfile"));
+const Test = lazy(() => import("./components/profile/Profile"));
 
 // Student/General Pages
-import StudentDashboard from "./pages/StudentDashboard";
-import StudentCourse from "./pages/Course";
-import StudentEvent from "./pages/Event";
-import Ticket from "./pages/Ticket";
-import Note from "./pages/Note";
-import StudentAchievement from "./pages/Achievement";
-import StudentCertificate from "./pages/Certificate";
-import Difficulties from "./pages/Difficulties";
-import ScholarshipStudentForm from "./pages/scholarshipStudentPages/ScholarshipStudent";
-import UniversityDetails from "./pages/UniversityDetails";
-import StudentReportPage from "./pages/scholarshipStudentPages/StudentReportPage";
-import StudentReportList from "./pages/scholarshipStudentPages/StudentReportList ";
-import FinancialReport from "./pages/FinancialReport";
-import CreateTicket from "./pages/CreateTicket";
-import TicketList from "./pages/TicketList";
-import SemesterForm from "./pages/scholarshipStudentPages/SemesterForm";
-import SemestersList from "./pages/scholarshipStudentPages/SemesterList";
-import StudentReport from "./pages/scholarshipStudentPages/StudentReport";
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard"));
+const StudentCourse = lazy(() => import("./pages/Course"));
+const StudentEvent = lazy(() => import("./pages/Event"));
+const Ticket = lazy(() => import("./pages/Ticket"));
+const Note = lazy(() => import("./pages/Note"));
+const StudentAchievement = lazy(() => import("./pages/Achievement"));
+const StudentCertificate = lazy(() => import("./pages/Certificate"));
+const Difficulties = lazy(() => import("./pages/Difficulties"));
+const ScholarshipStudentForm = lazy(() => import("./pages/scholarshipStudentPages/ScholarshipStudent"));
+const UniversityDetails = lazy(() => import("./pages/UniversityDetails"));
+const StudentReportPage = lazy(() => import("./pages/scholarshipStudentPages/StudentReportPage"));
+const StudentReportList = lazy(() => import("./pages/scholarshipStudentPages/StudentReportList "));
+const FinancialReport = lazy(() => import("./pages/FinancialReport"));
+const CreateTicket = lazy(() => import("./pages/CreateTicket"));
+const TicketList = lazy(() => import("./pages/TicketList"));
+const SemesterForm = lazy(() => import("./pages/scholarshipStudentPages/SemesterForm"));
+const SemestersList = lazy(() => import("./pages/scholarshipStudentPages/SemesterList"));
+const StudentReport = lazy(() => import("./pages/scholarshipStudentPages/StudentReport"));
 
 // Admin & Employee Pages
-import AdminDashboard from "./pages/adminDashboard/AdminDashboard";
-import EmployeeDashboard from "./pages/employeeDashboard/EmployeeDashboard";
-import EmployeeStudentReports from "./pages/employeeDashboard/StudentReports";
-import StudentDetails from "./pages/adminDashboard/StudentDetails";
-import AllUsers from "./pages/adminDashboard/AllUsers";
-import Roles from "./pages/adminDashboard/Roles";
-import Analytics from "./pages/adminDashboard/Analytics";
-import RoleRequestManager from "./pages/adminDashboard/RoleRequestManager";
-import AdminStudentReports from "./pages/adminDashboard/AdminStudentReports";
-import AdminTickets from "./pages/adminDashboard/AdminTickets";
-import AdminProgramsHub from "./pages/adminDashboard/AdminProgramsHub";
-import AdminFinancialOverview from "./pages/adminDashboard/AdminFinancialOverview";
-import AdminScholarshipHub from "./pages/adminDashboard/AdminScholarshipHub";
+const AdminDashboard = lazy(() => import("./pages/adminDashboard/AdminDashboard"));
+const EmployeeDashboard = lazy(() => import("./pages/employeeDashboard/EmployeeDashboard"));
+const EmployeeStudentReports = lazy(() => import("./pages/employeeDashboard/StudentReports"));
+const StudentDetails = lazy(() => import("./pages/adminDashboard/StudentDetails"));
+const AllUsers = lazy(() => import("./pages/adminDashboard/AllUsers"));
+const Roles = lazy(() => import("./pages/adminDashboard/Roles"));
+const Analytics = lazy(() => import("./pages/adminDashboard/Analytics"));
+const RoleRequestManager = lazy(() => import("./pages/adminDashboard/RoleRequestManager"));
+const AdminStudentReports = lazy(() => import("./pages/adminDashboard/AdminStudentReports"));
+const AdminTickets = lazy(() => import("./pages/adminDashboard/AdminTickets"));
+const AdminProgramsHub = lazy(() => import("./pages/adminDashboard/AdminProgramsHub"));
+const AdminFinancialOverview = lazy(() => import("./pages/adminDashboard/AdminFinancialOverview"));
+const AdminScholarshipHub = lazy(() => import("./pages/adminDashboard/AdminScholarshipHub"));
 
-import NotFound from "./pages/404";
+const NotFound = lazy(() => import("./pages/404"));
 
 // Institute Portal (بوابة معهد حضرموت للموهوبين)
 import InstituteAdminLayout from "./layouts/InstituteAdminLayout";
-import InstituteDashboard from "./pages/instituteAdmin/Dashboard";
-import InstituteYearsStudents from "./pages/instituteAdmin/YearsStudents";
-import InstituteMembers from "./pages/instituteAdmin/Members";
-import InstituteAnnouncements from "./pages/instituteAdmin/Announcements";
-import InstituteBehavior from "./pages/instituteAdmin/Behavior";
-import InstituteResults from "./pages/instituteAdmin/Results";
-import InstituteEvaluations from "./pages/instituteAdmin/Evaluations";
-import InstituteCorrespondence from "./pages/instituteAdmin/Correspondence";
-import InstituteBugs from "./pages/instituteAdmin/Bugs";
-import InstituteLeave from "./pages/instituteAdmin/Leave";
-import InstituteIdeas from "./pages/instituteAdmin/Ideas";
-import InstituteFees from "./pages/instituteAdmin/Fees";
-import InstituteCourses from "./pages/instituteAdmin/Courses";
-import InstituteAchievements from "./pages/instituteAdmin/Achievements";
+const InstituteDashboard = lazy(() => import("./pages/instituteAdmin/Dashboard"));
+const InstituteYearsStudents = lazy(() => import("./pages/instituteAdmin/YearsStudents"));
+const InstituteMembers = lazy(() => import("./pages/instituteAdmin/Members"));
+const InstituteAnnouncements = lazy(() => import("./pages/instituteAdmin/Announcements"));
+const InstituteBehavior = lazy(() => import("./pages/instituteAdmin/Behavior"));
+const InstituteResults = lazy(() => import("./pages/instituteAdmin/Results"));
+const InstituteEvaluations = lazy(() => import("./pages/instituteAdmin/Evaluations"));
+const InstituteCorrespondence = lazy(() => import("./pages/instituteAdmin/Correspondence"));
+const InstituteBugs = lazy(() => import("./pages/instituteAdmin/Bugs"));
+const InstituteLeave = lazy(() => import("./pages/instituteAdmin/Leave"));
+const InstituteIdeas = lazy(() => import("./pages/instituteAdmin/Ideas"));
+const InstituteFees = lazy(() => import("./pages/instituteAdmin/Fees"));
+const InstituteCourses = lazy(() => import("./pages/instituteAdmin/Courses"));
+const InstituteAchievements = lazy(() => import("./pages/instituteAdmin/Achievements"));
 
 // Institute Student Portal (بوابة الطالب)
 import InstituteStudentLayout from "./layouts/InstituteStudentLayout";
-import ISOverview from "./pages/instituteStudent/Overview";
-import ISAnnouncements from "./pages/instituteStudent/Announcements";
-import ISResults from "./pages/instituteStudent/Results";
-import ISEvaluations from "./pages/instituteStudent/Evaluations";
-import ISCourses from "./pages/instituteStudent/Courses";
-import ISAchievements from "./pages/instituteStudent/Achievements";
-import ISIdeas from "./pages/instituteStudent/Ideas";
-import ISLeave from "./pages/instituteStudent/Leave";
-import ISBehavior from "./pages/instituteStudent/Behavior";
-import ISCorrespondence from "./pages/instituteStudent/Correspondence";
-import ISBugs from "./pages/instituteStudent/Bugs";
-import ISFees from "./pages/instituteStudent/Fees";
+const ISOverview = lazy(() => import("./pages/instituteStudent/Overview"));
+const ISAnnouncements = lazy(() => import("./pages/instituteStudent/Announcements"));
+const ISResults = lazy(() => import("./pages/instituteStudent/Results"));
+const ISEvaluations = lazy(() => import("./pages/instituteStudent/Evaluations"));
+const ISCourses = lazy(() => import("./pages/instituteStudent/Courses"));
+const ISAchievements = lazy(() => import("./pages/instituteStudent/Achievements"));
+const ISIdeas = lazy(() => import("./pages/instituteStudent/Ideas"));
+const ISLeave = lazy(() => import("./pages/instituteStudent/Leave"));
+const ISBehavior = lazy(() => import("./pages/instituteStudent/Behavior"));
+const ISCorrespondence = lazy(() => import("./pages/instituteStudent/Correspondence"));
+const ISBugs = lazy(() => import("./pages/instituteStudent/Bugs"));
+const ISFees = lazy(() => import("./pages/instituteStudent/Fees"));
 
 // Guardian Portal (بوابة ولي الأمر)
 import GuardianLayout from "./layouts/GuardianLayout";
-import GuardianLogin from "./pages/guardian/GuardianLogin";
-import GuardianOverview from "./pages/guardian/GuardianOverview";
-import GuardianResults from "./pages/guardian/GuardianResults";
-import GuardianEvaluations from "./pages/guardian/GuardianEvaluations";
-import GuardianBehavior from "./pages/guardian/GuardianBehavior";
-import GuardianFees from "./pages/guardian/GuardianFees";
+const GuardianLogin = lazy(() => import("./pages/guardian/GuardianLogin"));
+const GuardianOverview = lazy(() => import("./pages/guardian/GuardianOverview"));
+const GuardianResults = lazy(() => import("./pages/guardian/GuardianResults"));
+const GuardianEvaluations = lazy(() => import("./pages/guardian/GuardianEvaluations"));
+const GuardianBehavior = lazy(() => import("./pages/guardian/GuardianBehavior"));
+const GuardianFees = lazy(() => import("./pages/guardian/GuardianFees"));
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -102,6 +104,7 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   return (
     <>
+      <Suspense fallback={<Loading />}>
       <Routes>
         {/* PUBLIC ROUTES */}
         <Route element={<PublicLayout />}>
@@ -112,6 +115,10 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Route>
+
+        {/* ACCOUNT ROUTES — rendered inside the signed-in user's own shell */}
+        <Route element={<AccountLayout />}>
           <Route path="/profile" element={<Profile />} />
           <Route path="/pro" element={<Test />} />
           <Route path="/test" element={<ProfileComponent />} />
@@ -218,7 +225,21 @@ function App() {
         </Route>
 
       </Routes>
-      <ToastContainer />
+      </Suspense>
+      {/* Toasts confirm actions: bottom inline-end corner, at most three,
+          5 s and paused on hover or focus (§4.8). */}
+      <ToastContainer
+        position="bottom-left"
+        rtl
+        limit={3}
+        autoClose={5000}
+        pauseOnHover
+        pauseOnFocusLoss
+        closeOnClick={false}
+        hideProgressBar
+        newestOnTop={false}
+        theme="light"
+      />
     </>
   );
 }

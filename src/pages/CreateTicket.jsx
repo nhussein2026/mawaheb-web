@@ -1,108 +1,93 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
-
-import { Card, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { MessageSquare, Send, ChevronRight } from 'lucide-react';
+import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card, CardContent } from "../components/ui/Card";
+import { Button } from "../components/ui/Button";
+import { Field, Input, Textarea, RequiredNote } from "../components/ui/Input";
+import { Callout } from "../components/ui/Feedback";
+import { API_BASE_URL } from "../services/api/config";
 
 const CreateTicket = () => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [loading, setLoading] = useState(false);
   const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
+  const [form, setForm] = useState({ title: "", description: "" });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const validate = (f) => ({
+    title: f.title.trim() ? "" : "يُرجى إدخال عنوان التذكرة",
+    description: f.description.trim() ? "" : "يُرجى وصف المشكلة",
+  });
+
+  const set = (k) => (e) => {
+    const next = { ...form, [k]: e.target.value };
+    setForm(next);
+    if (errors[k]) setErrors(validate(next));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const found = validate(form);
+    setErrors(found);
+    setFormError("");
+    if (found.title || found.description) {
+      document.getElementById(found.title ? "ticket-title" : "ticket-desc")?.focus();
+      return;
+    }
     setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ title, description })
+      const response = await fetch(`${API_BASE_URL}/tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
       });
-
       if (response.ok) {
-        toast.success('تم إرسال التذكرة بنجاح');
-        navigate('/ticket-list');
+        toast.success("تم إرسال التذكرة");
+        navigate("/ticket-list");
       } else {
-        toast.error('فشل في إرسال التذكرة');
+        setFormError("تعذّر إرسال التذكرة. يُرجى المحاولة مرة أخرى.");
       }
-    } catch (error) {
-      toast.error('حدث خطأ ما');
+    } catch {
+      setFormError("تعذّر الاتصال بالخادم ولم تُرسل التذكرة. يُرجى المحاولة مرة أخرى.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="flex items-center gap-2 text-text-muted hover:text-brand-600 transition-colors cursor-pointer" onClick={() => navigate(-1)}>
-          <ChevronRight size={20} />
-          <span className="font-medium text-sm">العودة</span>
-        </div>
-
-        <Card className="border-none shadow-xl overflow-hidden bg-surface-card">
-          <div className="bg-brand-900 p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-800/20 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-            <MessageSquare size={40} className="mb-4 text-accent-400 opacity-80 relative z-10" />
-            <h1 className="text-2xl font-bold relative z-10">فتح تذكرة دعم جديدة</h1>
-            <p className="text-brand-200 text-sm mt-1 relative z-10">اشرح لنا مشكلتك وسنقوم بالرد عليك في أقرب وقت ممكن.</p>
-          </div>
-          <CardContent className="p-8">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-text-secondary">عنوان التذكرة</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="مثال: مشكلة في رفع التقرير"
-                  required
-                  className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-text-secondary">وصف المشكلة</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="اكتب تفاصيل مشكلتك هنا..."
-                  required
-                  rows="5"
-                  className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all resize-none"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={loading}
-                variant="primary"
-                className="w-full h-12 rounded-xl text-lg"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <Send className="ml-2" size={18} />
-                    إرسال التذكرة
-                  </>
-                )}
+    <div className="space-y-6">
+      <PageHeader
+        title="فتح تذكرة دعم"
+        description="اشرح مشكلتك وسيرد عليك فريق الدعم في أقرب وقت."
+        breadcrumbs={[{ label: "التذاكر والدعم", to: "/student/tickets" }, { label: "فتح تذكرة دعم" }]}
+      />
+      <Card className="max-w-[720px]">
+        <CardContent className="pt-5 sm:pt-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            {formError ? <Callout tone="danger">{formError}</Callout> : null}
+            <RequiredNote />
+            <Field label="عنوان التذكرة" hint="مثال: مشكلة في رفع التقرير" required error={errors.title} id="ticket-title">
+              <Input value={form.title} onChange={set("title")} dir="auto" />
+            </Field>
+            <Field label="وصف المشكلة" required error={errors.description} id="ticket-desc">
+              <Textarea rows={5} value={form.description} onChange={set("description")} dir="auto" />
+            </Field>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => navigate(-1)} disabled={loading}>
+                إلغاء
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+              <Button type="submit" loading={loading}>
+                إرسال التذكرة
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
-
 
 export default CreateTicket;

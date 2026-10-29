@@ -1,36 +1,32 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { toast } from "react-toastify";
-import { Lightbulb, Send } from "lucide-react";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { labelCls, textareaCls } from "../../components/institute/formStyles";
+import { Field, Input, Textarea, RequiredNote } from "../../components/ui/Input";
+import { Callout } from "../../components/ui/Feedback";
+import { StatusBadge } from "../../components/ui/Badge";
+import { HistoryCard, HistoryItem } from "../../components/ui/HistoryCard";
+import { useResource } from "../../hooks/useResource";
 import instituteApi from "../../services/api/instituteApi";
-import { ideaStatusLabel } from "../../constants/institute";
+import { ideaStatusLabel, IDEA_STATUS_TONE } from "../../constants/institute";
+import { formatDate, formatNumber } from "../../utils/format";
 
-const dt = (d) => (d ? new Date(d).toLocaleDateString("ar") : "—");
 const emptyForm = { subject: "", description: "" };
 
 const Ideas = () => {
-  const [rows, setRows] = useState([]);
+  const { data: rows, status, reload } = useResource(() => instituteApi.getMyIdeas(), [], { initial: [] });
   const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const load = () =>
-    instituteApi
-      .getMyIdeas()
-      .then((res) => setRows(res.data?.data || []))
-      .catch(() => toast.error("تعذر تحميل الأفكار"));
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
+    setFormError("");
     if (!form.subject.trim()) {
-      toast.warn("موضوع الفكرة مطلوب");
+      setError("يُرجى إدخال موضوع الفكرة");
+      document.getElementById("idea-subject")?.focus();
       return;
     }
     setSaving(true);
@@ -38,9 +34,9 @@ const Ideas = () => {
       await instituteApi.submitIdea(form);
       toast.success("تم إيداع فكرتك في البنك");
       setForm(emptyForm);
-      load();
+      reload();
     } catch {
-      toast.error("تعذر إرسال الفكرة");
+      setFormError("تعذّر إيداع الفكرة ولم تُحفظ. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -48,58 +44,61 @@ const Ideas = () => {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="بنك الأفكار" description="اقترح أفكاراً إبداعية وتابع حالتها والنقاط الممنوحة." />
+      <PageHeader title="بنك الأفكار" description="اقترح أفكارًا إبداعية وتابع حالتها والنقاط الممنوحة." />
 
-      <Card className="border-none shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-accent-600" /> إيداع فكرة جديدة
-          </CardTitle>
+          <CardTitle>إيداع فكرة</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className={labelCls}>موضوع الفكرة *</label>
-              <Input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} />
-            </div>
-            <div>
-              <label className={labelCls}>وصف الفكرة</label>
-              <textarea
-                className={textareaCls}
-                rows={3}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          <form onSubmit={submit} noValidate className="max-w-[720px] space-y-4">
+            {formError ? <Callout tone="danger">{formError}</Callout> : null}
+            <RequiredNote />
+            <Field label="موضوع الفكرة" required error={error} id="idea-subject">
+              <Input
+                value={form.subject}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, subject: e.target.value }));
+                  if (error && e.target.value.trim()) setError("");
+                }}
+                dir="auto"
               />
+            </Field>
+            <Field label="وصف الفكرة" id="idea-desc">
+              <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} dir="auto" />
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" loading={saving}>
+                إيداع الفكرة
+              </Button>
             </div>
-            <Button type="submit" disabled={saving}>
-              <Send className="h-4 w-4" /> إيداع الفكرة
-            </Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">أفكاري</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {rows.map((i) => (
-            <div key={i._id} className="rounded-lg border-[0.5px] border-border-subtle p-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-text-primary">💡 {i.subject}</p>
-                <span className="shrink-0 text-xs">{ideaStatusLabel(i.status)}</span>
-              </div>
-              {i.description && <p className="mt-1 text-sm text-text-secondary">{i.description}</p>}
-              <p className="mt-1 text-xs text-text-muted">
-                {dt(i.createdAt)}
-                {i.status === "approved" && ` · النقاط الممنوحة: ${i.rewardPoints || 0}`}
-              </p>
-              {i.notes && <p className="mt-1 text-xs text-brand-700">ملاحظات التحكيم: {i.notes}</p>}
-            </div>
-          ))}
-          {!rows.length && <p className="py-8 text-center text-text-secondary">لم تقدّم أي أفكار بعد.</p>}
-        </CardContent>
-      </Card>
+      <HistoryCard title="أفكاري" status={status} onRetry={reload} count={rows.length} empty="لم تقدّم أي فكرة بعد" failed="تعذّر تحميل الأفكار">
+        {rows.map((i) => (
+          <HistoryItem
+            key={i._id}
+            title={i.subject}
+            status={<StatusBadge tone={IDEA_STATUS_TONE[i.status]}>{ideaStatusLabel(i.status)}</StatusBadge>}
+            meta={
+              <>
+                <span className="num">{formatDate(i.createdAt)}</span>
+                {i.status === "approved" ? (
+                  <>
+                    {" · "}النقاط الممنوحة <span className="num font-semibold">{formatNumber(i.rewardPoints || 0)}</span>
+                  </>
+                ) : null}
+              </>
+            }
+            reply={i.notes}
+            replyLabel="ملاحظات التحكيم"
+          >
+            {i.description}
+          </HistoryItem>
+        ))}
+      </HistoryCard>
     </div>
   );
 };

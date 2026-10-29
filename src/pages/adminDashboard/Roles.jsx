@@ -1,206 +1,162 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/DataTable";
-import { Search, ShieldAlert, Users, GraduationCap } from "lucide-react";
-import { Input } from "../../components/ui/Input";
+import { toast } from "react-toastify";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableStateRow } from "../../components/ui/DataTable";
+import { Select } from "../../components/ui/Input";
+import { SearchInput } from "../../components/ui/SearchInput";
+import { StatusBadge } from "../../components/ui/Badge";
+import { PersonCell } from "../../components/ui/PersonCell";
+import { EmptyState, SkeletonRows, Spinner } from "../../components/ui/Feedback";
+import { useConfirm } from "../../components/ui/confirmContext";
 import { formatRoleAr } from "../../components/admin/adminCopy";
+import { API_BASE_URL } from "../../services/api/config";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
 
-const roles = ["User", "Employee", "Admin", "Institute Student", "Scholarship Student"];
+const ROLES = ["User", "Employee", "Admin", "Institute Student", "Scholarship Student"];
 
-const selectClass =
-  "flex h-9 w-full max-w-xs items-center rounded-md border-[0.5px] border-border-default bg-surface-card px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 disabled:opacity-50 sm:w-48";
-
+// Assign a platform role to an account. A change is shown only after the
+// server confirms it; a failure is reported on the row and nothing changes.
 export default function Roles() {
   const token = useSelector((state) => state.auth.token);
+  const confirm = useConfirm();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [status, setStatus] = useState("loading");
+  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/users?limit=50&search=${encodeURIComponent(searchTerm)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.success) {
-        setUsers(data.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [rowError, setRowError] = useState({});
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchUsers();
-    }, 300);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, token]);
+    const t = setTimeout(() => setSearch(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  const handleRoleChange = async (userId, newRole) => {
-    setUpdatingId(userId);
+  const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/users/${userId}/role`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users?limit=50&search=${encodeURIComponent(search)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const data = await response.json();
+      setUsers(data.success ? data.data : []);
+      setStatus("ready");
+    } catch {
+      setStatus("failed");
+    }
+  }, [search, token]);
+
+  useLoadEffect(fetchUsers);
+
+  const retry = () => {
+    setStatus("loading");
+    fetchUsers();
+  };
+
+  const handleRoleChange = async (user, newRole) => {
+    if (newRole === user.role) return;
+    const ok = await confirm({
+      title: `تغيير دور ${user.name}؟`,
+      body: `سيتغير الدور من «${formatRoleAr(user.role)}» إلى «${formatRoleAr(newRole)}»، وتتغير معه الصفحات والصلاحيات المتاحة له بعد تسجيل دخوله التالي.`,
+      confirmLabel: "تغيير الدور",
+    });
+    if (!ok) return;
+    setUpdatingId(user._id);
+    setRowError((e) => ({ ...e, [user._id]: "" }));
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${user._id}/role`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ role: newRole }),
       });
-
-      if (!response.ok) {
-        console.warn("الخادم لم يؤكد التحديث؛ تم تحديث الواجهة مؤقتاً.");
-      }
-
-      setUsers((prev) => prev.map((u) => (u._id === userId ? { ...u, role: newRole } : u)));
-    } catch (err) {
-      console.error("Error updating role", err);
-      setUsers((prev) => prev.map((u) => (u._id === userId ? { ...u, role: newRole } : u)));
+      if (!response.ok) throw new Error(String(response.status));
+      setUsers((prev) => prev.map((u) => (u._id === user._id ? { ...u, role: newRole } : u)));
+      toast.success("تم تغيير الدور");
+    } catch {
+      setRowError((e) => ({
+        ...e,
+        [user._id]: "تعذّر تغيير الدور ولم يُحفظ. يمكن تعيين الأدوار حاليًا من صفحة طلبات الأدوار.",
+      }));
     } finally {
       setUpdatingId(null);
     }
   };
 
   return (
-    <>
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="الأدوار والصلاحيات"
-          description="ربط كل حساب بدور في المنصة. يُستدعى `PUT /admin/users/:id/role` عند توفره في الخادم."
-        />
+    <div className="space-y-6">
+      <PageHeader title="الأدوار والصلاحيات" description="ربط كل حساب بدور في المنصة. يأخذ الدور الجديد أثره بعد تسجيل الدخول التالي." />
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-brand-800 bg-brand-800 text-text-inverse">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-brand-200">المسؤولون</p>
-                  <p className="mt-2 text-xl font-medium">صلاحية كاملة</p>
-                </div>
-                <ShieldAlert className="h-8 w-8 shrink-0 text-accent-400" aria-hidden="true" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">الموظفون</p>
-                  <p className="mt-2 text-xl font-medium text-text-primary">تشغيلي</p>
-                  <p className="mt-1 text-xs text-text-secondary">أدوات مواجهة الطلاب</p>
-                </div>
-                <Users className="h-8 w-8 shrink-0 text-brand-600" aria-hidden="true" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">الطلاب</p>
-                  <p className="mt-2 text-xl font-medium text-text-primary">مقيّد</p>
-                  <p className="mt-1 text-xs text-text-secondary">منحة ومعهد</p>
-                </div>
-                <GraduationCap className="h-8 w-8 shrink-0 text-brand-600" aria-hidden="true" />
-              </div>
-            </CardContent>
-          </Card>
+      <Card>
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-default px-4 py-3 sm:px-6">
+          <SearchInput
+            label="بحث في المستخدمين"
+            placeholder="ابحث بالاسم أو البريد…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full sm:w-72"
+          />
+          <p className="text-xs text-text-tertiary">تظهر أول 50 نتيجة مطابقة.</p>
         </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <CardTitle>تعيين الأدوار</CardTitle>
-                <CardDescription>بحث وتحديث لأول ٥٠ نتيجة مطابقة.</CardDescription>
-              </div>
-              <div className="relative max-w-md">
-                <Search className="pointer-events-none absolute start-2.5 top-2.5 h-4 w-4 text-text-muted" />
-                <Input
-                  type="search"
-                  placeholder="ابحث عن مستخدم…"
-                  className="ps-9"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="py-10 text-center text-sm text-text-secondary">جاري تحميل المستخدمين…</div>
+        <Table caption="أدوار المستخدمين">
+          <TableHeader>
+            <TableRow>
+              <TableHead>المستخدم</TableHead>
+              <TableHead>الدور الحالي</TableHead>
+              <TableHead>تغيير الدور</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {status === "loading" ? (
+              <TableStateRow colSpan={3}>
+                <SkeletonRows rows={8} />
+              </TableStateRow>
+            ) : status === "failed" ? (
+              <TableStateRow colSpan={3}>
+                <EmptyState kind="failed" compact title="تعذّر تحميل المستخدمين" onRetry={retry} />
+              </TableStateRow>
+            ) : users.length === 0 ? (
+              <TableStateRow colSpan={3}>
+                <EmptyState kind="no-results" compact title={search ? `لا توجد نتائج لـ «${search}»` : "لا يوجد مستخدمون"} />
+              </TableStateRow>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>المستخدم</TableHead>
-                    <TableHead>الدور الحالي</TableHead>
-                    <TableHead>دور جديد</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user._id}>
-                      <TableCell>
-                        <div className="font-medium text-text-primary">{user.name}</div>
-                        <div className="text-sm text-text-secondary">{user.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center rounded-full border-[0.5px] border-border-default bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
-                          {formatRoleAr(user.role)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <select
-                            className={selectClass}
-                            value={user.role}
-                            onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                            disabled={updatingId === user._id}
-                          >
-                            {roles.map((r) => (
-                              <option key={r} value={r}>
-                                {formatRoleAr(r)}
-                              </option>
-                            ))}
-                          </select>
-                          {updatingId === user._id ? (
-                            <div
-                              className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {users.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center text-text-secondary">
-                        لا يوجد مستخدمون.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              users.map((user) => (
+                <TableRow key={user._id}>
+                  <TableCell className="min-w-60">
+                    <PersonCell name={user.name} secondary={user.email} secondaryLtr src={user.imageUrl} />
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge>{formatRoleAr(user.role)}</StatusBadge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        aria-label={`دور ${user.name}`}
+                        className="w-full sm:w-52"
+                        value={user.role}
+                        onChange={(e) => handleRoleChange(user, e.target.value)}
+                        disabled={updatingId === user._id}
+                      >
+                        {ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {formatRoleAr(r)}
+                          </option>
+                        ))}
+                      </Select>
+                      {updatingId === user._id ? <Spinner label="جارٍ الحفظ" className="text-text-tertiary" /> : null}
+                    </div>
+                    {rowError[user._id] ? (
+                      <p role="alert" className="mt-1 max-w-sm text-xs font-semibold text-danger-700">
+                        {rowError[user._id]}
+                      </p>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </>
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
   );
 }

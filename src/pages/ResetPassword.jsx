@@ -1,117 +1,116 @@
-// src/ResetPassword.js
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import { Field, Input } from "../components/ui/Input";
+import { Callout } from "../components/ui/Feedback";
+import { AuthCard, authLinkCls } from "../components/ui/AuthCard";
+import { API_BASE_URL } from "../services/api/config";
 
 function ResetPassword() {
   const { token } = useParams();
-  const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
+  const [form, setForm] = useState({ password: "", confirm: "" });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+  const validate = (f) => ({
+    password: !f.password
+      ? "يُرجى إدخال كلمة المرور الجديدة"
+      : f.password.length < 6
+        ? "يجب أن تكون كلمة المرور من 6 أحرف على الأقل"
+        : "",
+    confirm: !f.confirm ? "يُرجى تأكيد كلمة المرور" : f.confirm !== f.password ? "كلمتا المرور غير متطابقتين" : "",
+  });
+
+  const onChange = (e) => {
+    const next = { ...form, [e.target.name]: e.target.value };
+    setForm(next);
+    if (errors[e.target.name]) setErrors(validate(next));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const next = validate(form);
+    setErrors(next);
+    setFormError("");
+    if (next.password || next.confirm) {
+      document.getElementById(next.password ? "reset-password" : "reset-confirm")?.focus();
       return;
     }
-
+    setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/reset-password/${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ newPassword }),
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: form.password }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle server errors
-        setError(data.message || "Something went wrong");
-        navigate('/login');
+      if (response.ok) {
+        setDone(true);
+      } else if (response.status >= 500) {
+        // The backend answers an expired or malformed link with 500 (report L1).
+        setFormError("انتهت صلاحية رابط إعادة التعيين أو أنه غير صالح. يُرجى طلب رابط جديد.");
       } else {
-        // Reset successful
-        setSuccess("Password reset successful! Go to login within your new password");
-        setEmail("");
-        setNewPassword("");
-        setConfirmPassword("");
+        const data = await response.json().catch(() => ({}));
+        setFormError(data.message || "تعذّر إعادة تعيين كلمة المرور. يُرجى طلب رابط جديد.");
       }
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      setError("Failed to reset password. Please try again.");
+    } catch {
+      setFormError("تعذّر الاتصال بالخادم. يُرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-semibold text-center mb-6 text-gray-800">
-          Reset Password
-        </h1>
-        {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-        {success && <p className="text-green-500 text-center mb-4">{success}</p>}
-        <form onSubmit={handleResetPassword} className="space-y-6">
-          {/* Email Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* New Password Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              New Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Confirm Password Field */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="block w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition duration-300"
+    <AuthCard
+      title="تعيين كلمة مرور جديدة"
+      footer={
+        <Link to="/login" className={authLinkCls}>
+          العودة إلى تسجيل الدخول
+        </Link>
+      }
+    >
+      {done ? (
+        <Callout
+          tone="success"
+          title="تم تغيير كلمة المرور"
+          action={
+            <Link to="/login" className={authLinkCls}>
+              تسجيل الدخول
+            </Link>
+          }
+        >
+          يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
+        </Callout>
+      ) : (
+        <>
+          {formError ? (
+            <Callout
+              tone="danger"
+              className="mb-5"
+              action={
+                <Link to="/forgot-password" className={authLinkCls}>
+                  طلب رابط جديد
+                </Link>
+              }
             >
-              Reset Password
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              {formError}
+            </Callout>
+          ) : null}
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <Field label="كلمة المرور الجديدة" hint="6 أحرف على الأقل" error={errors.password} id="reset-password">
+              <Input type="password" name="password" dir="ltr" autoComplete="new-password" value={form.password} onChange={onChange} />
+            </Field>
+            <Field label="تأكيد كلمة المرور" error={errors.confirm} id="reset-confirm">
+              <Input type="password" name="confirm" dir="ltr" autoComplete="new-password" value={form.confirm} onChange={onChange} />
+            </Field>
+            <Button type="submit" size="lg" className="w-full" loading={loading}>
+              حفظ كلمة المرور
+            </Button>
+          </form>
+        </>
+      )}
+    </AuthCard>
   );
 }
 

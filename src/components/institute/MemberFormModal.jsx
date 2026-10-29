@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
-import { X, Save, GraduationCap } from "lucide-react";
+import { Dialog } from "../ui/Dialog";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
+import { Field, Input, Select, Textarea, RequiredNote } from "../ui/Input";
+import { Callout } from "../ui/Feedback";
 import instituteApi from "../../services/api/instituteApi";
 import {
   INSTITUTE_ROLE_OPTIONS,
@@ -10,12 +11,15 @@ import {
   SEAT_TYPE_OPTIONS,
 } from "../../constants/institute";
 
-const selectCls =
-  "flex h-9 w-full rounded-md border-[0.5px] border-border-default bg-neutral-50 px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
-const labelCls = "mb-1 block text-xs font-medium text-text-secondary";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FORM_ID = "member-form";
 
-// Add/edit member form. Student academic & financial block appears only when
-// the selected rank is "student" (spec §3).
+const fieldsetCls = "grid grid-cols-1 gap-4 md:grid-cols-2";
+const legendCls = "mb-3 text-heading-4 text-text-primary";
+
+// Add/edit member. The student academic & financial block appears only when
+// the selected rank is "student". Errors show at each field and in a summary
+// at the top; nothing typed is lost on a failed save.
 const MemberFormModal = ({ member, onClose, onSaved }) => {
   const isEdit = !!member;
   const p = member?.studentProfile || {};
@@ -29,7 +33,6 @@ const MemberFormModal = ({ member, onClose, onSaved }) => {
     instituteRole: member?.instituteRole || "student",
     phone_number: member?.phone_number || "",
     bio: member?.bio || "",
-    // student block
     academicNumber: p.academicNumber || "",
     batch: p.batch || "",
     level: p.level || "",
@@ -41,154 +44,202 @@ const MemberFormModal = ({ member, onClose, onSaved }) => {
     guardianMobile: p.guardianMobile || "",
     guardianPin: "",
   });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const isStudent = form.instituteRole === "student";
+
+  const validate = (f) => {
+    const e = {};
+    if (!f.name.trim()) e.name = "يُرجى إدخال الاسم الكامل";
+    if (!f.email.trim()) e.email = "يُرجى إدخال البريد الإلكتروني";
+    else if (!EMAIL_RE.test(f.email.trim())) e.email = "يُرجى إدخال بريد إلكتروني صحيح، مثل name@example.com";
+    if (!f.username.trim()) e.username = "يُرجى إدخال اسم المستخدم";
+    if (!isEdit && !f.password) e.password = "يُرجى إدخال كلمة المرور";
+    return e;
+  };
+
+  const set = (k) => (e) => {
+    const next = { ...form, [k]: e.target.value };
+    setForm(next);
+    if (errors[k]) setErrors((er) => ({ ...er, [k]: validate(next)[k] }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.username) {
-      toast.warn("الاسم والبريد واسم المستخدم مطلوبة");
-      return;
-    }
-    if (!isEdit && !form.password) {
-      toast.warn("كلمة المرور مطلوبة عند الإنشاء");
+    const found = validate(form);
+    setErrors(found);
+    setFormError("");
+    if (Object.keys(found).length) {
+      document.getElementById("member-errors")?.focus();
       return;
     }
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, email: form.email.trim().toLowerCase() };
       if (isEdit && !payload.password) delete payload.password;
       if (isEdit && !payload.guardianPin) delete payload.guardianPin;
-
-      if (isEdit) {
-        await instituteApi.updateMember(member._id, payload);
-        toast.success("تم تحديث بيانات العضو");
-      } else {
-        await instituteApi.createMember(payload);
-        toast.success("تم حفظ بيانات العضو");
-      }
+      if (isEdit) await instituteApi.updateMember(member._id, payload);
+      else await instituteApi.createMember(payload);
+      toast.success(isEdit ? "تم حفظ التغييرات" : "تمت إضافة العضو");
       onSaved();
     } catch (err) {
-      toast.error(err?.response?.data?.message || "تعذر حفظ العضو");
+      setFormError(err?.response?.data?.message || "تعذّر حفظ بيانات العضو. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
   };
 
+  const errorList = Object.entries(errors).filter(([, v]) => v);
+
   return (
-    <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/50 p-4" dir="rtl">
-      <div className="my-8 w-full max-w-3xl rounded-2xl bg-surface-card shadow-xl">
-        <div className="flex items-center justify-between border-b-[0.5px] border-border-subtle px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">
-            {isEdit ? `تعديل بيانات العضو: ${member.name}` : "➕ إضافة عضو جديد"}
-          </h2>
-          <button onClick={onClose} className="rounded-md p-1.5 text-text-secondary hover:bg-neutral-100"><X className="h-5 w-5" /></button>
-        </div>
+    <Dialog
+      title={isEdit ? `تعديل بيانات ${member.name}` : "إضافة عضو"}
+      onClose={onClose}
+      size="lg"
+      busy={saving}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
+            إلغاء
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            {isEdit ? "حفظ التغييرات" : "إضافة العضو"}
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={submit} noValidate className="space-y-6">
+        {errorList.length ? (
+          <div id="member-errors" tabIndex={-1} className="outline-none">
+            <Callout tone="danger" title={`يوجد ${errorList.length === 1 ? "خطأ واحد يجب" : `${errorList.length} أخطاء يجب`} تصحيحها`}>
+              <ul className="mt-1 list-disc ps-5">
+                {errorList.map(([k, msg]) => (
+                  <li key={k}>
+                    <a href={`#m-${k}`} className="underline underline-offset-4">
+                      {msg}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </Callout>
+          </div>
+        ) : null}
+        {formError ? <Callout tone="danger">{formError}</Callout> : null}
+        <RequiredNote />
 
-        <form onSubmit={submit} className="space-y-5 p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelCls}>الاسم الكامل (العربي) *</label>
-              <Input value={form.name} onChange={set("name")} />
-            </div>
-            <div>
-              <label className={labelCls}>الاسم الكامل (بالإنجليزية)</label>
+        <fieldset>
+          <legend className={legendCls}>بيانات الحساب</legend>
+          <div className={fieldsetCls}>
+            <Field label="الاسم الكامل بالعربية" required error={errors.name} id="m-name">
+              <Input value={form.name} onChange={set("name")} autoComplete="name" />
+            </Field>
+            <Field label="الاسم الكامل بالإنجليزية" id="m-name-en">
               <Input value={form.full_name_en} onChange={set("full_name_en")} dir="ltr" />
-            </div>
-            <div>
-              <label className={labelCls}>البريد الإلكتروني *</label>
-              <Input type="email" value={form.email} onChange={set("email")} dir="ltr" />
-            </div>
-            <div>
-              <label className={labelCls}>اسم المستخدم * {isEdit && <span className="text-text-muted">(لا يمكن تعديله)</span>}</label>
-              <Input value={form.username} onChange={set("username")} disabled={isEdit} dir="ltr" />
-            </div>
-            <div>
-              <label className={labelCls}>كلمة المرور {isEdit ? "(اتركها فارغة للإبقاء)" : "*"}</label>
-              <Input type="password" value={form.password} onChange={set("password")} dir="ltr" />
-            </div>
-            <div>
-              <label className={labelCls}>رتبة العضوية *</label>
-              <select className={selectCls} value={form.instituteRole} onChange={set("instituteRole")}>
-                {INSTITUTE_ROLE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>رقم جوال العضو</label>
-              <Input value={form.phone_number} onChange={set("phone_number")} dir="ltr" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={labelCls}>نبذة</label>
-              <textarea className={`${selectCls} h-auto py-2`} rows={2} value={form.bio} onChange={set("bio")} />
-            </div>
+            </Field>
+            <Field label="البريد الإلكتروني" required error={errors.email} id="m-email">
+              <Input type="email" value={form.email} onChange={set("email")} dir="ltr" inputMode="email" autoComplete="email" />
+            </Field>
+            <Field
+              label="اسم المستخدم"
+              required
+              hint={isEdit ? "لا يمكن تعديل اسم المستخدم بعد الإنشاء" : undefined}
+              error={errors.username}
+              id="m-username"
+            >
+              <Input value={form.username} onChange={set("username")} readOnly={isEdit} dir="ltr" autoComplete="off" />
+            </Field>
+            <Field
+              label="كلمة المرور"
+              required={!isEdit}
+              hint={isEdit ? "اتركها فارغة للإبقاء على كلمة المرور الحالية" : undefined}
+              error={errors.password}
+              id="m-password"
+            >
+              <Input type="password" value={form.password} onChange={set("password")} dir="ltr" autoComplete="new-password" />
+            </Field>
+            <Field label="رتبة العضوية" required id="m-role">
+              <Select value={form.instituteRole} onChange={set("instituteRole")}>
+                {INSTITUTE_ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="رقم الجوال" hint="مثال: 771234567" id="m-phone">
+              <Input value={form.phone_number} onChange={set("phone_number")} dir="ltr" inputMode="tel" autoComplete="tel" />
+            </Field>
+            <Field label="نبذة" className="md:col-span-2" id="m-bio">
+              <Textarea rows={2} value={form.bio} onChange={set("bio")} />
+            </Field>
           </div>
+        </fieldset>
 
-          {isStudent && (
-            <div className="rounded-xl border-[0.5px] border-brand-200 bg-brand-50/40 p-4">
-              <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-700">
-                <GraduationCap className="h-4 w-4" /> تفاصيل الطالب الأكاديمية والمالية
-              </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className={labelCls}>الرقم الأكاديمي</label>
+        {isStudent ? (
+          <>
+            <fieldset>
+              <legend className={legendCls}>البيانات الأكاديمية والمالية</legend>
+              <div className={fieldsetCls}>
+                <Field label="الرقم الأكاديمي" id="m-acad">
                   <Input value={form.academicNumber} onChange={set("academicNumber")} dir="ltr" />
-                </div>
-                <div>
-                  <label className={labelCls}>الدفعة المربوط بها</label>
+                </Field>
+                <Field label="الدفعة" id="m-batch">
                   <Input value={form.batch} onChange={set("batch")} dir="ltr" />
-                </div>
-                <div>
-                  <label className={labelCls}>تصنيف المستوى</label>
-                  <select className={selectCls} value={form.level} onChange={set("level")}>
-                    <option value="">-- اختر المستوى --</option>
-                    {ACADEMIC_LEVEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>نوع المقعد الدراسي</label>
-                  <select className={selectCls} value={form.seatType} onChange={set("seatType")}>
-                    {SEAT_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>رصيد بنك الأفكار</label>
-                  <Input type="number" value={form.ideasBankBalance} onChange={set("ideasBankBalance")} dir="ltr" />
-                </div>
-                <div>
-                  <label className={labelCls}>المحافظة</label>
+                </Field>
+                <Field label="المستوى الأكاديمي" id="m-level">
+                  <Select value={form.level} onChange={set("level")}>
+                    <option value="">اختر المستوى</option>
+                    {ACADEMIC_LEVEL_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="نوع المقعد" id="m-seat">
+                  <Select value={form.seatType} onChange={set("seatType")}>
+                    {SEAT_TYPE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="رصيد بنك الأفكار" id="m-ideas">
+                  <Input type="number" inputMode="decimal" value={form.ideasBankBalance} onChange={set("ideasBankBalance")} dir="ltr" />
+                </Field>
+                <Field label="المحافظة" id="m-gov">
                   <Input value={form.governorate} onChange={set("governorate")} />
-                </div>
-                <div>
-                  <label className={labelCls}>المديرية</label>
+                </Field>
+                <Field label="المديرية" id="m-district">
                   <Input value={form.district} onChange={set("district")} />
-                </div>
-                <div>
-                  <label className={labelCls}>اسم ولي الأمر</label>
-                  <Input value={form.guardianName} onChange={set("guardianName")} />
-                </div>
-                <div>
-                  <label className={labelCls}>جوال ولي الأمر</label>
-                  <Input value={form.guardianMobile} onChange={set("guardianMobile")} dir="ltr" />
-                </div>
-                <div>
-                  <label className={labelCls}>رمز سر ولي الأمر {isEdit && <span className="text-text-muted">(اتركه فارغاً للإبقاء)</span>}</label>
-                  <Input type="password" value={form.guardianPin} onChange={set("guardianPin")} dir="ltr" />
-                </div>
+                </Field>
               </div>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 border-t-[0.5px] border-border-subtle pt-4">
-            <Button type="button" variant="secondary" onClick={onClose}>إلغاء</Button>
-            <Button type="submit" disabled={saving}>
-              <Save className="ml-1.5 h-4 w-4" /> حفظ بيانات العضو
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+            </fieldset>
+            <fieldset>
+              <legend className={legendCls}>ولي الأمر</legend>
+              <div className={fieldsetCls}>
+                <Field label="اسم ولي الأمر" id="m-gname">
+                  <Input value={form.guardianName} onChange={set("guardianName")} />
+                </Field>
+                <Field label="جوال ولي الأمر" hint="مثال: 771234567" id="m-gmobile">
+                  <Input value={form.guardianMobile} onChange={set("guardianMobile")} dir="ltr" inputMode="tel" />
+                </Field>
+                <Field
+                  label="رمز ولي الأمر"
+                  hint={isEdit ? "اتركه فارغًا للإبقاء على الرمز الحالي" : "يستخدمه ولي الأمر لتسجيل الدخول إلى بوابته"}
+                  id="m-gpin"
+                >
+                  <Input type="password" value={form.guardianPin} onChange={set("guardianPin")} dir="ltr" autoComplete="new-password" />
+                </Field>
+              </div>
+            </fieldset>
+          </>
+        ) : null}
+      </form>
+    </Dialog>
   );
 };
 

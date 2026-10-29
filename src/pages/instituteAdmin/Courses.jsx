@@ -1,22 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { BookOpen, Users, Award, Plus, Save, Pencil, Trash2, BadgeCheck } from "lucide-react";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { Button, IconButton } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/DataTable";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableStateRow } from "../../components/ui/DataTable";
 import StatGrid from "../../components/institute/StatGrid";
 import Modal from "../../components/institute/Modal";
 import { selectCls, labelCls, textareaCls } from "../../components/institute/formStyles";
 import instituteApi from "../../services/api/instituteApi";
-import {
-  COURSE_TYPE_OPTIONS,
-  COURSE_STATUS_OPTIONS,
-  courseStatusLabel,
-} from "../../constants/institute";
+import { COURSE_TYPE_OPTIONS, COURSE_STATUS_OPTIONS, courseStatusLabel, COURSE_STATUS_TONE } from "../../constants/institute";
 
+import { useConfirm } from "../../components/ui/confirmContext";
+import { StatusBadge } from "../../components/ui/Badge";
+import { EmptyState, Callout } from "../../components/ui/Feedback";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
 const emptyForm = {
   courseType: "standalone",
   programTitleAr: "",
@@ -33,7 +33,8 @@ const emptyForm = {
 
 const Courses = () => {
   const year = useSelector((s) => s.academicYear.selectedYearId);
-  const [stats, setStats] = useState({});
+  const confirm = useConfirm();
+  const [formWarn, setFormWarn] = useState("");  const [loadError, setLoadError] = useState("");  const [stats, setStats] = useState({});
   const [rows, setRows] = useState([]);
   const [batches, setBatches] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -44,7 +45,7 @@ const Courses = () => {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const [st, list] = await Promise.all([
         instituteApi.getCourseStats(year),
@@ -52,11 +53,12 @@ const Courses = () => {
       ]);
       setStats(st.data?.data || {});
       setRows(list.data?.data || []);
+      setLoadError("");
     } catch {
-      toast.error("تعذر تحميل الدورات");
+      setLoadError("تعذّر تحميل الدورات");
     }
-  };
-  const loadLookups = async () => {
+  }, [year]);
+  const loadLookups = useCallback(async () => {
     try {
       const [b, s] = await Promise.all([
         instituteApi.listBatches(),
@@ -67,15 +69,10 @@ const Courses = () => {
     } catch {
       /* non-blocking */
     }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year]);
-  useEffect(() => {
-    loadLookups();
   }, []);
+
+  useLoadEffect(load);
+  useLoadEffect(loadLookups);
 
   const openCreate = () => {
     setEditingId(null);
@@ -102,8 +99,9 @@ const Courses = () => {
 
   const submit = async (e) => {
     e.preventDefault();
+    setFormWarn("");
     if (!form.title || !form.courseType) {
-      toast.warn("اسم الدورة ونوعها مطلوبان");
+      setFormWarn("اسم الدورة ونوعها مطلوبان");
       return;
     }
     setSaving(true);
@@ -119,31 +117,31 @@ const Courses = () => {
       setOpen(false);
       load();
     } catch {
-      toast.error("تعذر حفظ الدورة");
+      setFormWarn("تعذّر حفظ الدورة. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
   };
 
   const issue = async (c) => {
-    if (!window.confirm(`إصدار الشهادات لجميع المسجلين في «${c.title}»؟`)) return;
+    if (!(await confirm({ title: `إصدار الشهادات لدورة «${c.title}»؟`, body: "ستصدر شهادة لكل طالب مسجل في الدورة وتظهر في بوابته.", confirmLabel: "إصدار الشهادات" }))) return;
     try {
       const res = await instituteApi.issueCertificates(c._id);
       toast.success(res.data?.message || "تم إصدار الشهادات");
       load();
     } catch {
-      toast.error("تعذر إصدار الشهادات");
+      toast.error("تعذّر إصدار الشهادات");
     }
   };
 
   const remove = async (c) => {
-    if (!window.confirm(`حذف الدورة «${c.title}»؟`)) return;
+    if (!(await confirm({ title: `حذف الدورة «${c.title}»؟`, body: "ستُحذف الدورة وتسجيلاتها نهائيًا.", confirmLabel: "حذف الدورة", destructive: true }))) return;
     try {
       await instituteApi.deleteCourse(c._id);
       toast.success("تم حذف الدورة");
       load();
     } catch {
-      toast.error("تعذر الحذف");
+      toast.error("تعذّر الحذف");
     }
   };
 
@@ -158,6 +156,11 @@ const Courses = () => {
           </Button>
         }
       />
+      {loadError ? (
+        <Callout tone="danger" title={loadError} action={<Button variant="secondary" size="sm" onClick={() => load()}>إعادة المحاولة</Button>}>
+          يُرجى التحقق من الاتصال والمحاولة مرة أخرى.
+        </Callout>
+      ) : null}
 
       <StatGrid
         cols={3}
@@ -168,11 +171,11 @@ const Courses = () => {
         ]}
       />
 
-      <Card className="border-none shadow-sm">
+      <Card className="">
         <CardHeader>
-          <CardTitle className="text-base">قائمة الدورات والبرامج</CardTitle>
+          <CardTitle>قائمة الدورات والبرامج</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="px-0 pb-0 pt-0 sm:px-0 sm:pb-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -188,7 +191,7 @@ const Courses = () => {
               {rows.map((c) => (
                 <TableRow key={c._id}>
                   <TableCell className="font-medium text-text-primary">
-                    📘 {c.title}
+                    {c.title}
                     {c.programTitleAr && (
                       <span className="mt-0.5 block text-xs text-text-muted">{c.programTitleAr}</span>
                     )}
@@ -196,26 +199,20 @@ const Courses = () => {
                   <TableCell className="text-sm">{c.trainer?.name || "—"}</TableCell>
                   <TableCell className="text-sm">{c.periodText || "—"}</TableCell>
                   <TableCell className="text-sm">{c.enrolledCount ?? 0}</TableCell>
-                  <TableCell className="text-xs">{courseStatusLabel(c.status)}</TableCell>
+                  <TableCell className="text-xs"><StatusBadge tone={COURSE_STATUS_TONE[c.status]}>{courseStatusLabel(c.status)}</StatusBadge></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(c)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50" aria-label="تحرير">
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => issue(c)} className="rounded p-1.5 text-success-text hover:bg-success-bg" aria-label="إصدار الشهادات">
-                        <BadgeCheck className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => remove(c)} className="rounded p-1.5 text-error-text hover:bg-error-bg" aria-label="حذف">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <IconButton label="تحرير" size="sm" tone="brand" onClick={() => openEdit(c)}><Pencil /></IconButton>
+                      <IconButton label="إصدار الشهادات" size="sm" tone="brand" onClick={() => issue(c)}><BadgeCheck /></IconButton>
+                      <IconButton label="حذف" size="sm" tone="danger" onClick={() => remove(c)}><Trash2 /></IconButton>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
               {!rows.length && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-text-secondary">لا توجد دورات مسجلة.</TableCell>
-                </TableRow>
+                <TableStateRow colSpan={6}>
+                  <EmptyState compact kind="first-use" title="لا توجد دورات مسجلة" />
+                </TableStateRow>
               )}
             </TableBody>
           </Table>
@@ -223,20 +220,21 @@ const Courses = () => {
       </Card>
 
       {open && (
-        <Modal title={editingId ? "تحرير الدورة" : "➕ إضافة دورة جديدة"} onClose={() => setOpen(false)}>
-          <form onSubmit={submit} className="space-y-4">
+        <Modal title={editingId ? "تحرير الدورة" : "إضافة دورة جديدة"} onClose={() => setOpen(false)}>
+          <form onSubmit={submit} noValidate className="space-y-4">
+            {formWarn ? <Callout tone="danger">{formWarn}</Callout> : null}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelCls}>النوع *</label>
-                <select className={selectCls} value={form.courseType} onChange={set("courseType")}>
+                <label htmlFor="coursesjsx-f1" className={labelCls}>النوع<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+                <select id="coursesjsx-f1" className={selectCls} value={form.courseType} onChange={set("courseType")}>
                   {COURSE_TYPE_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={labelCls}>الحالة</label>
-                <select className={selectCls} value={form.status} onChange={set("status")}>
+                <label htmlFor="coursesjsx-f2" className={labelCls}>الحالة</label>
+                <select id="coursesjsx-f2" className={selectCls} value={form.status} onChange={set("status")}>
                   {COURSE_STATUS_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
@@ -246,28 +244,28 @@ const Courses = () => {
               {form.courseType === "program" && (
                 <>
                   <div>
-                    <label className={labelCls}>عنوان البرنامج (بالعربي)</label>
-                    <Input value={form.programTitleAr} onChange={set("programTitleAr")} />
+                    <label htmlFor="coursesjsx-f3" className={labelCls}>عنوان البرنامج (بالعربي)</label>
+                    <Input id="coursesjsx-f3" value={form.programTitleAr} onChange={set("programTitleAr")} />
                   </div>
                   <div>
-                    <label className={labelCls}>عنوان البرنامج (بالإنجليزي)</label>
-                    <Input value={form.programTitleEn} onChange={set("programTitleEn")} dir="ltr" />
+                    <label htmlFor="coursesjsx-f4" className={labelCls}>عنوان البرنامج (بالإنجليزي)</label>
+                    <Input id="coursesjsx-f4" value={form.programTitleEn} onChange={set("programTitleEn")} dir="ltr" />
                   </div>
                 </>
               )}
 
               <div className="sm:col-span-2">
-                <label className={labelCls}>اسم الدورة التدريبية (بالعربي) *</label>
-                <Input value={form.title} onChange={set("title")} />
+                <label htmlFor="coursesjsx-f5" className={labelCls}>اسم الدورة التدريبية (بالعربي)<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+                <Input id="coursesjsx-f5" value={form.title} onChange={set("title")} />
               </div>
               <div className="sm:col-span-2">
-                <label className={labelCls}>عنوان الدورة المعتمد بالإنجليزية (للشهادات)</label>
-                <Input value={form.certTitleEn} onChange={set("certTitleEn")} dir="ltr" />
+                <label htmlFor="coursesjsx-f6" className={labelCls}>عنوان الدورة المعتمد بالإنجليزية (للشهادات)</label>
+                <Input id="coursesjsx-f6" value={form.certTitleEn} onChange={set("certTitleEn")} dir="ltr" />
               </div>
 
               <div>
-                <label className={labelCls}>المدرب المسؤول</label>
-                <select className={selectCls} value={form.trainer} onChange={set("trainer")}>
+                <label htmlFor="coursesjsx-f7" className={labelCls}>المدرب المسؤول</label>
+                <select id="coursesjsx-f7" className={selectCls} value={form.trainer} onChange={set("trainer")}>
                   <option value="">-- اختر المدرب --</option>
                   {staff.map((s) => (
                     <option key={s._id} value={s._id}>{s.name}</option>
@@ -275,22 +273,22 @@ const Courses = () => {
                 </select>
               </div>
               <div>
-                <label className={labelCls}>عدد الساعات</label>
-                <Input type="number" min={0} value={form.hours} onChange={set("hours")} dir="ltr" />
+                <label htmlFor="coursesjsx-f8" className={labelCls}>عدد الساعات</label>
+                <Input id="coursesjsx-f8" type="number" min={0} value={form.hours} onChange={set("hours")} dir="ltr" />
               </div>
 
               <div>
-                <label className={labelCls}>فترة الدورة (نص حر)</label>
-                <Input value={form.periodText} onChange={set("periodText")} placeholder="مثال: 24-25/6/2026" />
+                <label htmlFor="coursesjsx-f9" className={labelCls}>فترة الدورة (نص حر)</label>
+                <Input id="coursesjsx-f9" value={form.periodText} onChange={set("periodText")} placeholder="مثال: 24-25/6/2026" />
               </div>
               <div>
-                <label className={labelCls}>تاريخ التوثيق</label>
-                <Input type="date" value={form.documentationDate} onChange={set("documentationDate")} dir="ltr" />
+                <label htmlFor="coursesjsx-f10" className={labelCls}>تاريخ التوثيق</label>
+                <Input id="coursesjsx-f10" type="date" value={form.documentationDate} onChange={set("documentationDate")} dir="ltr" />
               </div>
 
               <div className="sm:col-span-2">
-                <label className={labelCls}>ربط المتدربين من خلال رقم الدفعة (اختيار متعدد)</label>
-                <select
+                <label htmlFor="coursesjsx-f11" className={labelCls}>ربط المتدربين من خلال رقم الدفعة (اختيار متعدد)</label>
+                <select id="coursesjsx-f11"
                   multiple
                   className={`${textareaCls} min-h-[6rem]`}
                   value={form.batches}
@@ -309,11 +307,11 @@ const Courses = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
+            <div className="flex flex-wrap justify-end gap-2 border-t border-border-subtle pt-4">
+              <Button variant="secondary" onClick={() => setOpen(false)}>إلغاء</Button>
+              <Button type="submit" loading={saving}>
                 <Save className="h-4 w-4" /> حفظ الدورة المقررة
               </Button>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>إلغاء</Button>
             </div>
           </form>
         </Modal>

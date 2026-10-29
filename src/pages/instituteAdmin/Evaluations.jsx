@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { FileBarChart, Rocket, Trash2, Eye, FileText } from "lucide-react";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { Button, IconButton } from "../../components/ui/Button";
 import { selectCls, labelCls, textareaCls } from "../../components/institute/formStyles";
 import instituteApi from "../../services/api/instituteApi";
 import {
@@ -12,13 +12,18 @@ import {
   evaluationPeriodLabel,
 } from "../../constants/institute";
 
-const dt = (d) => (d ? new Date(d).toLocaleString("ar") : "—");
+import { formatDateTime } from "../../utils/format";
+import { useConfirm } from "../../components/ui/confirmContext";
+import { Callout } from "../../components/ui/Feedback";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
+const dt = (d) => formatDateTime(d);
 const opts = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
 
 const Evaluations = () => {
   const year = useSelector((s) => s.academicYear.selectedYearId);
   const years = useSelector((s) => s.academicYear.years);
-  const [students, setStudents] = useState([]);
+  const confirm = useConfirm();
+  const [formWarn, setFormWarn] = useState("");  const [loadError, setLoadError] = useState("");  const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [form, setForm] = useState({ student: "", periodType: "period_1", notes: "", academicYear: "" });
   const [file, setFile] = useState(null);
@@ -31,7 +36,7 @@ const Evaluations = () => {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const loadLookups = async () => {
+  const loadLookups = useCallback(async () => {
     try {
       const [b, s] = await Promise.all([instituteApi.listBatches(), instituteApi.listStudents()]);
       setBatches(b.data?.data || []);
@@ -39,8 +44,8 @@ const Evaluations = () => {
     } catch {
       /* non-blocking */
     }
-  };
-  const loadRows = async () => {
+  }, []);
+  const loadRows = useCallback(async () => {
     try {
       const params = {};
       if (fPeriod) params.periodType = fPeriod;
@@ -48,24 +53,20 @@ const Evaluations = () => {
       else if (fBatch) params.batch = fBatch;
       const res = await instituteApi.listEvaluations(params, year);
       setRows(res.data?.data || []);
+      setLoadError("");
     } catch {
-      toast.error("تعذر تحميل التقارير");
+      setLoadError("تعذّر تحميل التقارير");
     }
-  };
+  }, [fPeriod, fStudent, fBatch, year]);
 
-  useEffect(() => {
-    loadLookups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    loadRows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fPeriod, fBatch, fStudent, year]);
+  useLoadEffect(loadLookups);
+  useLoadEffect(loadRows);
 
   const submit = async (e) => {
     e.preventDefault();
+    setFormWarn("");
     if (!form.student || !file) {
-      toast.warn("الطالب وملف التقرير مطلوبان");
+      setFormWarn("الطالب وملف التقرير مطلوبان");
       return;
     }
     setSaving(true);
@@ -79,20 +80,20 @@ const Evaluations = () => {
       setFile(null);
       loadRows();
     } catch {
-      toast.error("تعذر رفع التقرير");
+      setFormWarn("تعذّر رفع التقرير. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (id) => {
-    if (!window.confirm("حذف هذا التقرير؟")) return;
+    if (!(await confirm({ title: "حذف تقرير التقويم؟", body: "سيُحذف التقرير ولن يظهر للطالب أو لولي الأمر.", confirmLabel: "حذف التقرير", destructive: true }))) return;
     try {
       await instituteApi.deleteEvaluation(id);
       toast.success("تم الحذف");
       loadRows();
     } catch {
-      toast.error("تعذر الحذف");
+      toast.error("تعذّر الحذف");
     }
   };
 
@@ -104,18 +105,24 @@ const Evaluations = () => {
         title="تقارير تقويم الطلاب"
         description="رفع واعتماد تقارير تقويم الطلاب الدورية (PDF/صورة)، واستعراضها حسب الفترة والدفعة والطالب."
       />
+      {loadError ? (
+        <Callout tone="danger" title={loadError} action={<Button variant="secondary" size="sm" onClick={() => loadRows()}>إعادة المحاولة</Button>}>
+          يُرجى التحقق من الاتصال والمحاولة مرة أخرى.
+        </Callout>
+      ) : null}
 
-      <Card className="border-none shadow-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4 text-accent-600" /> رفع واعتماد تقرير تقويم جديد
+            <FileText className="size-5 text-text-tertiary" aria-hidden="true" /> رفع واعتماد تقرير تقويم جديد
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <form onSubmit={submit} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {formWarn ? <Callout tone="danger" className="sm:col-span-2">{formWarn}</Callout> : null}
             <div>
-              <label className={labelCls}>اختر الطالب *</label>
-              <select className={selectCls} value={form.student} onChange={set("student")}>
+              <label htmlFor="evaluation-f1" className={labelCls}>اختر الطالب<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+              <select id="evaluation-f1" className={selectCls} value={form.student} onChange={set("student")}>
                 <option value="">-- اختر الطالب --</option>
                 {students.map((s) => (
                   <option key={s.user?._id} value={s.user?._id}>{s.user?.name}</option>
@@ -123,16 +130,16 @@ const Evaluations = () => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>الفترة / نوع التقرير *</label>
-              <select className={selectCls} value={form.periodType} onChange={set("periodType")}>
+              <label htmlFor="evaluation-f2" className={labelCls}>الفترة / نوع التقرير<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+              <select id="evaluation-f2" className={selectCls} value={form.periodType} onChange={set("periodType")}>
                 {opts(EVALUATION_PERIOD_LABELS).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelCls}>العام الدراسي</label>
-              <select className={selectCls} value={form.academicYear} onChange={set("academicYear")}>
+              <label htmlFor="evaluation-f3" className={labelCls}>العام الدراسي</label>
+              <select id="evaluation-f3" className={selectCls} value={form.academicYear} onChange={set("academicYear")}>
                 <option value="">العام النشط</option>
                 {years.map((y) => (
                   <option key={y._id} value={y._id}>{y.name}</option>
@@ -140,12 +147,12 @@ const Evaluations = () => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>ملف التقرير (PDF / JPG / PNG) *</label>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-sm text-text-secondary" />
+              <label htmlFor="evaluation-f4" className={labelCls}>ملف التقرير (PDF / JPG / PNG)<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+              <input id="evaluation-f4" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-sm text-text-secondary" />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelCls}>ملاحظات إضافية (اختياري)</label>
-              <textarea className={textareaCls} rows={2} value={form.notes} onChange={set("notes")} />
+              <label htmlFor="evaluation-f5" className={labelCls}>ملاحظات إضافية (اختياري)</label>
+              <textarea id="evaluation-f5" className={textareaCls} rows={2} value={form.notes} onChange={set("notes")} />
             </div>
             <div className="sm:col-span-2">
               <Button type="submit" disabled={saving}>
@@ -156,7 +163,7 @@ const Evaluations = () => {
         </CardContent>
       </Card>
 
-      <Card className="border-none shadow-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileBarChart className="h-4 w-4 text-brand-600" /> استعراض التقارير
@@ -165,8 +172,8 @@ const Evaluations = () => {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className={labelCls}>الفترة / نوع التقرير</label>
-              <select className={selectCls} value={fPeriod} onChange={(e) => setFPeriod(e.target.value)}>
+              <label htmlFor="evaluation-f6" className={labelCls}>الفترة / نوع التقرير</label>
+              <select id="evaluation-f6" className={selectCls} value={fPeriod} onChange={(e) => setFPeriod(e.target.value)}>
                 <option value="">الكل</option>
                 {opts(EVALUATION_PERIOD_LABELS).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -174,15 +181,15 @@ const Evaluations = () => {
               </select>
             </div>
             <div>
-              <label className={labelCls}>الدفعة</label>
-              <select className={selectCls} value={fBatch} onChange={(e) => { setFBatch(e.target.value); setFStudent(""); }}>
+              <label htmlFor="evaluation-f7" className={labelCls}>الدفعة</label>
+              <select id="evaluation-f7" className={selectCls} value={fBatch} onChange={(e) => { setFBatch(e.target.value); setFStudent(""); }}>
                 <option value="">الكل</option>
                 {batches.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             <div>
-              <label className={labelCls}>الطالب</label>
-              <select className={selectCls} value={fStudent} onChange={(e) => setFStudent(e.target.value)}>
+              <label htmlFor="evaluation-f8" className={labelCls}>الطالب</label>
+              <select id="evaluation-f8" className={selectCls} value={fStudent} onChange={(e) => setFStudent(e.target.value)}>
                 <option value="">الكل</option>
                 {browseStudents.map((s) => <option key={s.user?._id} value={s.user?._id}>{s.user?.name}</option>)}
               </select>
@@ -197,16 +204,14 @@ const Evaluations = () => {
                   <p className="text-text-secondary">{evaluationPeriodLabel(r.periodType)} · {dt(r.createdAt)}</p>
                   {r.notes && <p className="text-xs text-text-muted">{r.notes}</p>}
                   <p className="text-xs text-text-muted">
-                    اطلاع ولي الأمر: {r.guardianViewedAt ? `✔️ ${dt(r.guardianViewedAt)}` : "❌ لم يطلع بعد"}
+                    اطلاع ولي الأمر: {r.guardianViewedAt ? <span className="num">{dt(r.guardianViewedAt)}</span> : "لم يطّلع بعد"}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <a href={r.fileUrl} target="_blank" rel="noreferrer" className="rounded p-1.5 text-brand-600 hover:bg-brand-50" title="عرض التقرير">
                     <Eye className="h-4 w-4" />
                   </a>
-                  <button onClick={() => remove(r._id)} className="rounded p-1.5 text-error-text hover:bg-error-bg" aria-label="حذف">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <IconButton label="حذف" size="sm" tone="danger" onClick={() => remove(r._id)}><Trash2 /></IconButton>
                 </div>
               </div>
             ))}

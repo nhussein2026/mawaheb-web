@@ -1,38 +1,39 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { toast } from "react-toastify";
-import { Trophy, Send } from "lucide-react";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { selectCls, labelCls, textareaCls } from "../../components/institute/formStyles";
+import { Field, Input, Select, Textarea, RequiredNote } from "../../components/ui/Input";
+import { Callout } from "../../components/ui/Feedback";
+import { StatusBadge } from "../../components/ui/Badge";
+import { HistoryCard, HistoryItem } from "../../components/ui/HistoryCard";
+import { useResource } from "../../hooks/useResource";
 import instituteApi from "../../services/api/instituteApi";
-import { achievementReviewLabel } from "../../constants/institute";
+import { achievementReviewLabel, ACHIEVEMENT_REVIEW_TONE } from "../../constants/institute";
+import { formatDate } from "../../utils/format";
 
-const dt = (d) => (d ? new Date(d).toLocaleDateString("ar") : "—");
 const CATEGORIES = ["مشروع", "جائزة", "شهادة", "ابتكار", "ورقة بحثية", "نشاط تطوعي", "أخرى"];
 const emptyForm = { title: "", description: "", category: "مشروع" };
+const MAX_FILE = 10 * 1024 * 1024;
 
 const Achievements = () => {
-  const [rows, setRows] = useState([]);
+  const { data: rows, status, reload } = useResource(() => instituteApi.getMyAchievements(), [], { initial: [] });
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const load = () =>
-    instituteApi
-      .getMyAchievements()
-      .then((res) => setRows(res.data?.data || []))
-      .catch(() => toast.error("تعذر تحميل الإنجازات"));
-
-  useEffect(() => {
-    load();
-  }, []);
+  const [fileKey, setFileKey] = useState(0);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) {
-      toast.warn("عنوان الإنجاز مطلوب");
+    const found = {};
+    if (!form.title.trim()) found.title = "يُرجى إدخال عنوان الإنجاز";
+    if (file && file.size > MAX_FILE) found.file = "حجم الملف أكبر من 10 ميغابايت. يُرجى اختيار ملف أصغر.";
+    setErrors(found);
+    setFormError("");
+    if (Object.keys(found).length) {
+      document.getElementById(found.title ? "ach-title" : "ach-file")?.focus();
       return;
     }
     setSaving(true);
@@ -41,12 +42,13 @@ const Achievements = () => {
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
       if (file) fd.append("file", file);
       await instituteApi.submitAchievement(fd);
-      toast.success("تم رفع إنجازك، بانتظار التحكيم");
+      toast.success("تم إرسال الإنجاز للتحكيم");
       setForm(emptyForm);
       setFile(null);
-      load();
+      setFileKey((k) => k + 1);
+      reload();
     } catch {
-      toast.error("تعذر رفع الإنجاز");
+      setFormError("تعذّر إرسال الإنجاز ولم يُحفظ. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -54,88 +56,89 @@ const Achievements = () => {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="إنجازاتي" description="سجّل إنجازاتك مع ملف داعم وتابع حالة التحكيم والتغذية الراجعة." />
+      <PageHeader title="إنجازاتي" description="سجّل إنجازاتك مع ملف داعم وتابع حالة التحكيم والتغذية الراجعة." />
 
-      <Card className="border-none shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Trophy className="h-4 w-4 text-accent-600" /> تسجيل إنجاز جديد
-          </CardTitle>
+          <CardTitle>تسجيل إنجاز</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className={labelCls}>عنوان الإنجاز *</label>
-                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelCls}>التصنيف</label>
-                <select
-                  className={selectCls}
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                >
+          <form onSubmit={submit} noValidate className="max-w-[720px] space-y-4">
+            {formError ? <Callout tone="danger">{formError}</Callout> : null}
+            <RequiredNote />
+            <Field label="عنوان الإنجاز" required error={errors.title} id="ach-title">
+              <Input
+                value={form.title}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, title: e.target.value }));
+                  if (errors.title && e.target.value.trim()) setErrors((er) => ({ ...er, title: "" }));
+                }}
+              />
+            </Field>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="التصنيف" id="ach-category">
+                <Select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
                   {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>الملف الداعم (PDF / JPG / PNG)</label>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  className="text-sm text-text-secondary"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelCls}>الوصف</label>
-                <textarea
-                  className={textareaCls}
-                  rows={3}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </div>
+                </Select>
+              </Field>
+              <Field label="الملف الداعم" hint="PDF أو JPG أو PNG، حتى 10 ميغابايت" error={errors.file} id="ach-file">
+                <Input key={fileKey} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              </Field>
             </div>
-            <Button type="submit" disabled={saving}>
-              <Send className="h-4 w-4" /> رفع الإنجاز
-            </Button>
+            <Field label="الوصف" id="ach-desc">
+              <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} dir="auto" />
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" loading={saving}>
+                إرسال للتحكيم
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">سجل إنجازاتي</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {rows.map((a) => (
-            <div key={a._id} className="rounded-lg border-[0.5px] border-border-subtle p-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-text-primary">🏆 {a.title}</p>
-                <span className="shrink-0 text-xs">{achievementReviewLabel(a.reviewStatus)}</span>
-              </div>
-              {a.description && <p className="mt-1 text-sm text-text-secondary">{a.description}</p>}
-              <p className="mt-1 text-xs text-text-muted">
-                {dt(a.createdAt)}
-                {(a.fileUrl || a.achievement_image) && (
+      <HistoryCard
+        title="سجل إنجازاتي"
+        status={status}
+        onRetry={reload}
+        count={rows.length}
+        empty="لم تسجّل أي إنجاز بعد"
+        failed="تعذّر تحميل الإنجازات"
+      >
+        {rows.map((a) => (
+          <HistoryItem
+            key={a._id}
+            title={a.title}
+            status={<StatusBadge tone={ACHIEVEMENT_REVIEW_TONE[a.reviewStatus]}>{achievementReviewLabel(a.reviewStatus)}</StatusBadge>}
+            meta={
+              <>
+                <span className="num">{formatDate(a.createdAt)}</span>
+                {a.fileUrl || a.achievement_image ? (
                   <>
                     {" · "}
-                    <a href={a.fileUrl || a.achievement_image} target="_blank" rel="noreferrer" className="text-brand-600 underline">
+                    <a
+                      href={a.fileUrl || a.achievement_image}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-brand-strong underline underline-offset-4"
+                    >
                       الملف المرفق
                     </a>
                   </>
-                )}
-              </p>
-              {a.feedback && <p className="mt-1 text-xs text-brand-700">التغذية الراجعة: {a.feedback}</p>}
-            </div>
-          ))}
-          {!rows.length && <p className="py-8 text-center text-text-secondary">لم تسجّل أي إنجازات بعد.</p>}
-        </CardContent>
-      </Card>
+                ) : null}
+              </>
+            }
+            reply={a.feedback}
+            replyLabel="التغذية الراجعة"
+          >
+            {a.description}
+          </HistoryItem>
+        ))}
+      </HistoryCard>
     </div>
   );
 };

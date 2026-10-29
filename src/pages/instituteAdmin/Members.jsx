@@ -1,47 +1,51 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { toast } from "react-toastify";
-import { Users, UserCog, ShieldCheck, Wallet, Plus, Search, Pencil, Trash2, RotateCcw } from "lucide-react";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { Card, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/DataTable";
-import StatCard from "../../components/institute/StatCard";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Button, IconButton } from "../../components/ui/Button";
+import { Select } from "../../components/ui/Input";
+import { SearchInput } from "../../components/ui/SearchInput";
+import { Tabs } from "../../components/ui/Tabs";
+import { Pagination } from "../../components/ui/Pagination";
+import { PersonCell } from "../../components/ui/PersonCell";
+import { StatusBadge } from "../../components/ui/Badge";
+import { EmptyState, SkeletonRows } from "../../components/ui/Feedback";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableStateRow } from "../../components/ui/DataTable";
+import StatGrid from "../../components/institute/StatGrid";
 import MemberFormModal from "../../components/institute/MemberFormModal";
-import Loading from "../../components/ui/Loading";
 import instituteApi from "../../services/api/instituteApi";
 import { roleLabel, levelLabel, seatLabel, ACADEMIC_LEVEL_OPTIONS } from "../../constants/institute";
+import { useConfirm } from "../../components/ui/confirmContext";
 
-const selectCls =
-  "h-9 rounded-md border-[0.5px] border-border-default bg-neutral-50 px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
+const SEGMENTS = [
+  { value: "all", label: "كل الأعضاء" },
+  { value: "staff", label: "المشرفون والمدربون" },
+  { value: "batch", label: "الطلاب حسب الدفعة" },
+];
 
-const FilterBtn = ({ value, active, onSelect, children }) => (
-  <button
-    onClick={() => onSelect(value)}
-    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-      active ? "bg-brand-800 text-brand-50" : "bg-neutral-100 text-text-secondary hover:bg-brand-50"
-    }`}
-  >
-    {children}
-  </button>
-);
+const studentDetails = (p) =>
+  [p?.batch ? `الدفعة ${p.batch}` : null, p?.level ? levelLabel(p.level) : null, p?.seatType ? seatLabel(p.seatType) : null]
+    .filter(Boolean)
+    .join(" · ");
 
 const Members = () => {
+  const confirm = useConfirm();
   const [stats, setStats] = useState({});
   const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("loading");
   const [batches, setBatches] = useState([]);
 
-  // filters
-  const [group, setGroup] = useState("all"); // all | staff | batch
+  const [group, setGroup] = useState("all");
   const [batch, setBatch] = useState("");
   const [level, setLevel] = useState("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(null);
 
-  // modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -50,7 +54,7 @@ const Members = () => {
       const res = await instituteApi.getMemberStats();
       setStats(res.data?.data || {});
     } catch {
-      /* non-fatal */
+      /* tiles keep their last values */
     }
   }, []);
 
@@ -59,12 +63,11 @@ const Members = () => {
       const res = await instituteApi.listBatches();
       setBatches(res.data?.data || []);
     } catch {
-      /* non-fatal */
+      /* batch filter stays empty */
     }
   }, []);
 
   const loadMembers = useCallback(async () => {
-    setLoading(true);
     try {
       const params = { page, limit: 10 };
       if (group === "staff") params.group = "staff";
@@ -77,172 +80,241 @@ const Members = () => {
       const res = await instituteApi.listMembers(params);
       setMembers(res.data?.data || []);
       setPages(res.data?.pages || 1);
+      setTotal(res.data?.total ?? null);
+      setStatus("ready");
     } catch {
-      toast.error("تعذر تحميل الأعضاء");
-    } finally {
-      setLoading(false);
+      setStatus("failed");
     }
   }, [group, batch, level, search, page]);
 
-  useEffect(() => { loadStats(); loadBatches(); }, [loadStats, loadBatches]);
-  useEffect(() => { loadMembers(); }, [loadMembers]);
+  useLoadEffect(loadStats, loadBatches);
+  useLoadEffect(loadMembers);
 
+  const filtersActive = group !== "all" || batch || level || search;
   const resetFilters = () => {
-    setGroup("all"); setBatch(""); setLevel(""); setSearch(""); setSearchInput(""); setPage(1);
+    setGroup("all");
+    setBatch("");
+    setLevel("");
+    setSearch("");
+    setSearchInput("");
+    setPage(1);
   };
 
-  const openCreate = () => { setEditing(null); setModalOpen(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setModalOpen(true);
+  };
   const openEdit = async (id) => {
     try {
       const res = await instituteApi.getMember(id);
       setEditing(res.data?.data || null);
       setModalOpen(true);
     } catch {
-      toast.error("تعذر جلب بيانات العضو");
+      toast.error("تعذّر فتح بيانات العضو. يُرجى المحاولة مرة أخرى.");
     }
   };
 
   const removeMember = async (m) => {
-    if (!window.confirm(`حذف العضو «${m.name}»؟`)) return;
+    if (!(await confirm({ title: `حذف العضو «${m.name}»؟`, body: "سيُحذف حساب العضو ولن يتمكن من الدخول إلى البوابة.", confirmLabel: "حذف العضو", destructive: true }))) return;
     try {
       await instituteApi.deleteMember(m._id);
       toast.success("تم حذف العضو");
-      loadMembers(); loadStats();
+      loadMembers();
+      loadStats();
     } catch {
-      toast.error("تعذر حذف العضو");
+      toast.error("تعذّر حذف العضو. يُرجى المحاولة مرة أخرى.");
     }
   };
 
-  const onSaved = () => { setModalOpen(false); loadMembers(); loadStats(); loadBatches(); };
-
-  const selectGroup = (value) => { setGroup(value); setPage(1); };
+  const onSaved = () => {
+    setModalOpen(false);
+    loadMembers();
+    loadStats();
+    loadBatches();
+  };
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title="إدارة الأعضاء والمدربين"
-        description="إدارة كافة المستخدمين — المشرفين والمدربين والطلاب."
-        actions={<Button onClick={openCreate}><Plus className="ml-1.5 h-4 w-4" /> إضافة عضو جديد</Button>}
+      <PageHeader
+        title="الأعضاء والمدربون"
+        description="المشرفون والمدربون والطلاب المسجلون في المعهد"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus aria-hidden="true" /> إضافة عضو
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="الطلاب المسجلين" value={stats.registeredStudents ?? 0} icon={Users} tone="brand" />
-        <StatCard label="المشرفين العامين والمسارات" value={stats.supervisors ?? 0} icon={ShieldCheck} tone="accent" />
-        <StatCard label="المدربين والأساتذة" value={stats.trainers ?? 0} icon={UserCog} tone="neutral" />
-        <StatCard label="طلاب المقاعد المدفوعة" value={stats.paidSeats ?? 0} icon={Wallet} tone="success" />
-      </div>
+      <StatGrid
+        stats={[
+          { label: "الطلاب المسجلون", value: stats.registeredStudents ?? 0 },
+          { label: "المشرفون", value: stats.supervisors ?? 0 },
+          { label: "المدربون", value: stats.trainers ?? 0 },
+          { label: "طلاب المقاعد المدفوعة", value: stats.paidSeats ?? 0 },
+        ]}
+      />
 
-      <Card className="border-none shadow-sm">
-        <CardContent className="space-y-4 p-5">
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2">
-            <FilterBtn value="all" active={group === "all"} onSelect={selectGroup}>🌐 كل الأعضاء</FilterBtn>
-            <FilterBtn value="staff" active={group === "staff"} onSelect={selectGroup}>💼 المشرفين والمدربين</FilterBtn>
-            <FilterBtn value="batch" active={group === "batch"} onSelect={selectGroup}>🎓 الطلاب حسب الدفعة</FilterBtn>
-
-            {group === "batch" && (
-              <>
-                <select className={selectCls} value={batch} onChange={(e) => { setBatch(e.target.value); setPage(1); }}>
-                  <option value="">كل الدفعات</option>
-                  {batches.map((b) => <option key={b} value={b}>الدفعة {b}</option>)}
-                </select>
-                <select className={selectCls} value={level} onChange={(e) => { setLevel(e.target.value); setPage(1); }}>
-                  <option value="">كل المستويات</option>
-                  {ACADEMIC_LEVEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </>
-            )}
-
-            <button onClick={resetFilters} className="flex items-center gap-1 rounded-lg bg-neutral-100 px-3 py-1.5 text-sm text-text-secondary hover:bg-brand-50">
-              <RotateCcw className="h-3.5 w-3.5" /> إعادة الضبط
-            </button>
-
-            <form
-              onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); setPage(1); }}
-              className="relative ms-auto"
-            >
-              <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto h-4 w-4 text-neutral-500" />
-              <Input
-                className="w-56 ps-9"
-                placeholder="بحث بالاسم أو البريد…"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-            </form>
-          </div>
-
-          {/* Table */}
-          {loading ? (
-            <Loading variant="inline" message="جارٍ تحميل الأعضاء…" />
-          ) : (
+      <Card>
+        <Tabs
+          label="تصنيف الأعضاء"
+          items={SEGMENTS}
+          value={group}
+          onChange={(v) => {
+            setGroup(v);
+            setPage(1);
+          }}
+          className="px-2 sm:px-4"
+        />
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-default px-4 py-3 sm:px-6">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSearch(searchInput.trim());
+              setPage(1);
+            }}
+            className="w-full sm:w-72"
+          >
+            <SearchInput
+              label="بحث في الأعضاء"
+              placeholder="بحث بالاسم أو البريد…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onClear={() => {
+                setSearch("");
+                setPage(1);
+              }}
+            />
+          </form>
+          {group === "batch" ? (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>الرقم الأكاديمي</TableHead>
-                    <TableHead>الاسم الكامل</TableHead>
-                    <TableHead>اسم المستخدم</TableHead>
-                    <TableHead>البريد الإلكتروني</TableHead>
-                    <TableHead>رقم الجوال</TableHead>
-                    <TableHead>الرتبة</TableHead>
-                    <TableHead>تفاصيل إضافية</TableHead>
-                    <TableHead>العمليات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center text-text-secondary">لا يوجد أعضاء مطابقون</TableCell></TableRow>
-                  ) : members.map((m) => {
-                    const p = m.studentProfile;
-                    return (
-                      <TableRow key={m._id}>
-                        <TableCell>{p?.academicNumber || "—"}</TableCell>
-                        <TableCell className="font-medium">{m.name}</TableCell>
-                        <TableCell>{m.username || "—"}</TableCell>
-                        <TableCell className="text-text-secondary">{m.email}</TableCell>
-                        <TableCell>{m.phone_number || "—"}</TableCell>
-                        <TableCell>
-                          <span className="whitespace-nowrap rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
-                            {roleLabel(m.instituteRole)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs text-text-secondary">
-                          {m.instituteRole === "student"
-                            ? [p?.batch ? `دفعة ${p.batch}` : null, p?.level ? levelLabel(p.level) : null, p?.seatType ? seatLabel(p.seatType) : null].filter(Boolean).join(" · ") || "—"
-                            : m.full_name_en || m.bio || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <button onClick={() => openEdit(m._id)} className="rounded-md p-1.5 text-brand-600 hover:bg-brand-50" title="تعديل"><Pencil className="h-4 w-4" /></button>
-                            <button onClick={() => removeMember(m)} className="rounded-md p-1.5 text-error-text hover:bg-error-bg" title="حذف"><Trash2 className="h-4 w-4" /></button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs text-text-secondary">صفحة {page} من {pages}</span>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>السابق</Button>
-                  <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>التالي</Button>
-                </div>
-              </div>
+              <Select
+                aria-label="الدفعة"
+                className="w-auto min-w-36"
+                value={batch}
+                onChange={(e) => {
+                  setBatch(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">كل الدفعات</option>
+                {batches.map((b) => (
+                  <option key={b} value={b}>
+                    الدفعة {b}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                aria-label="المستوى"
+                className="w-auto min-w-44"
+                value={level}
+                onChange={(e) => {
+                  setLevel(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">كل المستويات</option>
+                {ACADEMIC_LEVEL_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
             </>
-          )}
-        </CardContent>
+          ) : null}
+          {filtersActive ? (
+            <Button variant="tertiary" size="sm" onClick={resetFilters}>
+              مسح الفلاتر
+            </Button>
+          ) : null}
+        </div>
+
+        <Table caption="الأعضاء" cards>
+          <TableHeader>
+            <TableRow>
+              <TableHead>العضو</TableHead>
+              <TableHead>الرقم الأكاديمي</TableHead>
+              <TableHead>اسم المستخدم</TableHead>
+              <TableHead>الجوال</TableHead>
+              <TableHead>الرتبة</TableHead>
+              <TableHead>تفاصيل</TableHead>
+              <TableHead>
+                <span className="sr-only">إجراءات</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {status === "loading" ? (
+              <TableStateRow colSpan={7}>
+                <SkeletonRows rows={6} />
+              </TableStateRow>
+            ) : status === "failed" ? (
+              <TableStateRow colSpan={7}>
+                <EmptyState kind="failed" title="تعذّر تحميل الأعضاء" onRetry={loadMembers} compact />
+              </TableStateRow>
+            ) : members.length === 0 ? (
+              <TableStateRow colSpan={7}>
+                {filtersActive ? (
+                  <EmptyState
+                    kind="no-results"
+                    compact
+                    title={search ? `لا توجد نتائج لـ «${search}» مع الفلاتر الحالية` : "لا يوجد أعضاء مطابقون للفلاتر الحالية"}
+                    action={
+                      <Button variant="secondary" onClick={resetFilters}>
+                        مسح الفلاتر
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <EmptyState
+                    kind="first-use"
+                    compact
+                    title="لا يوجد أعضاء بعد"
+                    description="أضف المشرفين والمدربين والطلاب لبدء العمل في البوابة."
+                    action={<Button onClick={openCreate}>إضافة أول عضو</Button>}
+                  />
+                )}
+              </TableStateRow>
+            ) : (
+              members.map((m) => {
+                const p = m.studentProfile;
+                return (
+                  <TableRow key={m._id}>
+                    <TableCell className="min-w-56">
+                      <PersonCell name={m.name} secondary={m.email} secondaryLtr src={m.imageUrl} />
+                    </TableCell>
+                    <TableCell label="الرقم الأكاديمي" className="num">{p?.academicNumber || "—"}</TableCell>
+                    <TableCell label="اسم المستخدم">
+                      <bdi>{m.username || "—"}</bdi>
+                    </TableCell>
+                    <TableCell label="الجوال" className="num">
+                      <bdi>{m.phone_number || "—"}</bdi>
+                    </TableCell>
+                    <TableCell label="الرتبة">
+                      <StatusBadge tone={m.instituteRole === "student" ? "neutral" : "info"}>{roleLabel(m.instituteRole)}</StatusBadge>
+                    </TableCell>
+                    <TableCell label="تفاصيل" className="text-text-secondary">
+                      {m.instituteRole === "student" ? studentDetails(p) || "—" : m.full_name_en || m.bio || "—"}
+                    </TableCell>
+                    <TableCell className="w-24">
+                      <div className="flex justify-end gap-1">
+                        <IconButton label={`تعديل ${m.name}`} size="sm" onClick={() => openEdit(m._id)}>
+                          <Pencil />
+                        </IconButton>
+                        <IconButton label={`حذف ${m.name}`} size="sm" tone="danger" onClick={() => removeMember(m)}>
+                          <Trash2 />
+                        </IconButton>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+        <Pagination page={page} pages={pages} total={total} pageSize={10} onChange={setPage} />
       </Card>
 
-      {modalOpen && (
-        <MemberFormModal
-          member={editing}
-          onClose={() => setModalOpen(false)}
-          onSaved={onSaved}
-        />
-      )}
+      {modalOpen ? <MemberFormModal member={editing} onClose={() => setModalOpen(false)} onSaved={onSaved} /> : null}
     </div>
   );
 };

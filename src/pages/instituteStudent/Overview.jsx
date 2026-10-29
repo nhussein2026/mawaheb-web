@@ -1,88 +1,100 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
-import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
-import { BookOpen, Award, Trophy, Lightbulb, Megaphone, GraduationCap } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "../../components/ui/Card";
+import { Chip } from "../../components/ui/Badge";
+import { EmptyState, SkeletonCard } from "../../components/ui/Feedback";
 import StatGrid from "../../components/institute/StatGrid";
 import instituteApi from "../../services/api/instituteApi";
+import { useResource } from "../../hooks/useResource";
 import { levelLabel, seatLabel } from "../../constants/institute";
-
-const dt = (d) => (d ? new Date(d).toLocaleDateString("ar") : "—");
+import { formatDate } from "../../utils/format";
 
 const Overview = () => {
   const user = useSelector((s) => s.auth?.user || {});
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    instituteApi
-      .getMyOverview()
-      .then((res) => setData(res.data?.data || {}))
-      .catch(() => toast.error("تعذر تحميل البيانات"));
-  }, []);
+  const { data, status, reload: load } = useResource(() => instituteApi.getMyOverview(), [], { initial: null });
 
   const profile = data?.profile || {};
   const counts = data?.counts || {};
   const announcements = data?.announcements || [];
+  const facts = [
+    profile.academicNumber && `الرقم الأكاديمي ${profile.academicNumber}`,
+    profile.batch && `الدفعة ${profile.batch}`,
+    profile.level && levelLabel(profile.level),
+    profile.seatType && seatLabel(profile.seatType),
+  ].filter(Boolean);
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl bg-brand-800 p-6 text-neutral-50 shadow-sm sm:p-8">
-        <div className="relative z-10">
-          <h1 className="text-2xl font-bold sm:text-3xl">أهلاً بك، {user?.name}! 🎓</h1>
-          <p className="mt-2 max-w-md text-sm text-brand-100">
-            تابع نتائجك ودوراتك وإنجازاتك في معهد حضرموت للموهوبين.
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-            {profile.academicNumber && (
-              <span className="rounded-full bg-brand-700 px-3 py-1">الرقم الأكاديمي: {profile.academicNumber}</span>
-            )}
-            {profile.batch && <span className="rounded-full bg-brand-700 px-3 py-1">الدفعة {profile.batch}</span>}
-            {profile.level && <span className="rounded-full bg-brand-700 px-3 py-1">{levelLabel(profile.level)}</span>}
-            {profile.seatType && <span className="rounded-full bg-brand-700 px-3 py-1">{seatLabel(profile.seatType)}</span>}
-          </div>
-        </div>
-        <div className="absolute -top-16 left-0 -ml-16 h-64 w-64 rounded-full bg-brand-600 opacity-20" />
-      </div>
-
-      <StatGrid
-        stats={[
-          { label: "الدورات المسجلة", value: counts.courses ?? 0, icon: BookOpen, tone: "brand" },
-          { label: "الشهادات الممنوحة", value: counts.certificates ?? 0, icon: Award, tone: "success" },
-          { label: "الإنجازات المقرة", value: counts.approvedAchievements ?? 0, icon: Trophy, tone: "accent" },
-          { label: "رصيد بنك الأفكار", value: counts.ideasBankBalance ?? 0, icon: Lightbulb, tone: "neutral" },
-        ]}
+      <PageHeader
+        title={`أهلًا بك، ${user?.name || ""}`}
+        description="تابع نتائجك ودوراتك وإنجازاتك في معهد حضرموت للموهوبين."
+        breadcrumbs={null}
       />
-
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Megaphone className="h-4 w-4 text-accent-600" /> آخر الإعلانات
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {announcements.map((a) => (
-            <div key={a._id} className="rounded-lg border-[0.5px] border-border-subtle p-3">
-              <p className="font-medium text-text-primary">{a.title}</p>
-              <p className="mt-1 text-sm text-text-secondary">{a.content}</p>
-              <p className="mt-1 text-xs text-text-muted">حتى {dt(a.publishEnd)}</p>
-            </div>
+      {facts.length ? (
+        <ul className="-mt-3 flex flex-wrap gap-2" aria-label="بياناتي">
+          {facts.map((f) => (
+            <li key={f}>
+              <Chip className="num">{f}</Chip>
+            </li>
           ))}
-          {!announcements.length && (
-            <p className="py-6 text-center text-sm text-text-secondary">لا توجد إعلانات حالياً.</p>
-          )}
-          <Link to="/institute-portal/announcements" className="inline-block text-sm text-brand-600 hover:underline">
-            عرض كل الإعلانات ←
-          </Link>
-        </CardContent>
-      </Card>
+        </ul>
+      ) : null}
 
-      <Card className="border-none shadow-sm">
-        <CardContent className="flex items-center gap-3 py-4 text-sm text-text-secondary">
-          <GraduationCap className="h-5 w-5 text-brand-600" />
-          <span>ولي أمرك: {profile.guardianName || "—"}</span>
-        </CardContent>
-      </Card>
+      {status === "failed" ? (
+        <Card>
+          <EmptyState kind="failed" title="تعذّر تحميل بياناتك" onRetry={load} />
+        </Card>
+      ) : (
+        <>
+          <StatGrid
+            stats={[
+              { label: "الدورات المسجلة", value: counts.courses ?? 0, to: "/institute-portal/courses" },
+              { label: "الشهادات الممنوحة", value: counts.certificates ?? 0, to: "/institute-portal/courses" },
+              { label: "الإنجازات المعتمدة", value: counts.approvedAchievements ?? 0, to: "/institute-portal/achievements" },
+              { label: "رصيد بنك الأفكار", value: counts.ideasBankBalance ?? 0, to: "/institute-portal/ideas" },
+            ]}
+          />
+
+          {status === "loading" ? (
+            <SkeletonCard />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>آخر الإعلانات</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {announcements.length ? (
+                  <ul className="divide-y divide-border-subtle">
+                    {announcements.map((a) => (
+                      <li key={a._id} className="py-3 first:pt-0">
+                        <p dir="auto" className="font-semibold text-text-primary">
+                          {a.title}
+                        </p>
+                        <p dir="auto" className="reading mt-1 text-sm text-text-secondary">
+                          {a.content}
+                        </p>
+                        <p className="num mt-1 text-xs text-text-tertiary">متاح حتى {formatDate(a.publishEnd)}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState kind="all-done" compact title="لا توجد إعلانات حاليًا" />
+                )}
+              </CardContent>
+              <CardFooter>
+                <span>
+                  ولي الأمر: <bdi className="text-text-secondary">{profile.guardianName || "—"}</bdi>
+                </span>
+                <Link to="/institute-portal/announcements" className="font-semibold text-brand-strong underline underline-offset-4">
+                  كل الإعلانات
+                </Link>
+              </CardFooter>
+            </Card>
+          )}
+        </>
+      )}
     </div>
   );
 };

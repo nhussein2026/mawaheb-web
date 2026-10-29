@@ -1,78 +1,87 @@
 import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { ShieldCheck, LogIn } from "lucide-react";
-import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { labelCls } from "../../components/institute/formStyles";
+import { Field, Input } from "../../components/ui/Input";
+import { Callout } from "../../components/ui/Feedback";
+import { AuthCard } from "../../components/ui/AuthCard";
 import guardianApi, { isGuardianLoggedIn } from "../../services/api/guardianApi";
 
 const GuardianLogin = () => {
   const navigate = useNavigate();
-  const [academicNumber, setAcademicNumber] = useState("");
-  const [pin, setPin] = useState("");
+  const [form, setForm] = useState({ academicNumber: "", pin: "" });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
 
   if (isGuardianLoggedIn()) return <Navigate to="/guardian" replace />;
 
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    if (errors[name] && value.trim()) setErrors((er) => ({ ...er, [name]: "" }));
+  };
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!academicNumber.trim() || !pin.trim()) {
-      toast.warn("الرقم الأكاديمي ورمز ولي الأمر مطلوبان");
+    const next = {
+      academicNumber: form.academicNumber.trim() ? "" : "يُرجى إدخال الرقم الأكاديمي للطالب",
+      pin: form.pin.trim() ? "" : "يُرجى إدخال رمز ولي الأمر",
+    };
+    setErrors(next);
+    setFormError("");
+    if (next.academicNumber || next.pin) {
+      document.getElementById(next.academicNumber ? "g-number" : "g-pin")?.focus();
       return;
     }
     setLoading(true);
     try {
-      await guardianApi.login(academicNumber.trim(), pin.trim());
-      toast.success("مرحباً بك");
+      await guardianApi.login(form.academicNumber.trim(), form.pin.trim());
       navigate("/guardian", { replace: true });
     } catch (err) {
-      toast.error(err?.response?.data?.message || "بيانات الدخول غير صحيحة");
+      setFormError(
+        err?.response?.status >= 500 || !err?.response
+          ? "تعذّر الاتصال بالخادم. يُرجى المحاولة بعد قليل."
+          : "الرقم الأكاديمي أو رمز ولي الأمر غير صحيح. يُرجى المحاولة مرة أخرى."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-surface-page px-4" dir="rtl" lang="ar">
-      <Card className="w-full max-w-md border-none shadow-sm">
-        <CardContent className="p-8">
-          <div className="mb-6 flex flex-col items-center text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-800">
-              <ShieldCheck className="h-6 w-6 text-accent-400" />
-            </div>
-            <h1 className="text-xl font-bold text-text-primary">بوابة ولي الأمر</h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              معهد حضرموت للموهوبين — للاطلاع على بيانات ابنك/ابنتك
-            </p>
-          </div>
-
-          <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className={labelCls}>الرقم الأكاديمي للطالب</label>
-              <Input
-                value={academicNumber}
-                onChange={(e) => setAcademicNumber(e.target.value)}
-                placeholder="مثال: 1101"
-                dir="ltr"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>رمز سر ولي الأمر</label>
-              <Input
-                type="password"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                dir="ltr"
-              />
-            </div>
-            <Button type="submit" disabled={loading} className="w-full">
-              <LogIn className="h-4 w-4" /> دخول
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="bg-canvas" dir="rtl" lang="ar">
+      <AuthCard title="بوابة ولي الأمر" description="للاطلاع على نتائج الطالب وتقاريره في معهد حضرموت للموهوبين">
+        {formError ? (
+          <Callout tone="danger" className="mb-5">
+            {formError}
+          </Callout>
+        ) : null}
+        <form onSubmit={submit} noValidate className="space-y-4">
+          <Field label="الرقم الأكاديمي للطالب" hint="مثال: 1101" error={errors.academicNumber} id="g-number">
+            <Input
+              name="academicNumber"
+              value={form.academicNumber}
+              onChange={onChange}
+              dir="ltr"
+              inputMode="numeric"
+              autoComplete="username"
+            />
+          </Field>
+          <Field label="رمز ولي الأمر" error={errors.pin} id="g-pin">
+            <Input
+              type="password"
+              name="pin"
+              value={form.pin}
+              onChange={onChange}
+              dir="ltr"
+              autoComplete="current-password"
+            />
+          </Field>
+          <Button type="submit" size="lg" loading={loading} className="w-full">
+            تسجيل الدخول
+          </Button>
+        </form>
+      </AuthCard>
     </div>
   );
 };

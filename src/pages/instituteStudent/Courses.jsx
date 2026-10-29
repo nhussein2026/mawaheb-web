@@ -1,87 +1,103 @@
-import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import { BadgeCheck, BookOpen } from "lucide-react";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import React from "react";
+import { ExternalLink } from "lucide-react";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import { StatusBadge } from "../../components/ui/Badge";
+import { EmptyState, SkeletonRows } from "../../components/ui/Feedback";
+import { useResource } from "../../hooks/useResource";
 import instituteApi from "../../services/api/instituteApi";
-import { courseStatusLabel } from "../../constants/institute";
+import { courseStatusLabel, COURSE_STATUS_TONE } from "../../constants/institute";
+import { formatDate } from "../../utils/format";
 
-const dt = (d) => (d ? new Date(d).toLocaleDateString("ar") : "—");
+function Section({ title, status, reload, empty, failed, children, count }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {status === "loading" ? (
+          <SkeletonRows rows={3} />
+        ) : status === "failed" ? (
+          <EmptyState kind="failed" compact title={failed} onRetry={reload} />
+        ) : count === 0 ? (
+          <EmptyState kind="first-use" compact title={empty} />
+        ) : (
+          <ul className="divide-y divide-border-subtle">{children}</ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 const Courses = () => {
-  const [rows, setRows] = useState([]);
-  const [certs, setCerts] = useState([]);
-
-  useEffect(() => {
-    instituteApi
-      .getMyCourses()
-      .then((res) => setRows(res.data?.data || []))
-      .catch(() => toast.error("تعذر تحميل الدورات"));
-    instituteApi
-      .getMyCertificates()
-      .then((res) => setCerts(res.data?.data || []))
-      .catch(() => {});
-  }, []);
+  const courses = useResource(() => instituteApi.getMyCourses(), [], { initial: [] });
+  const certs = useResource(() => instituteApi.getMyCertificates(), [], { initial: [] });
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="الدورات والشهادات" description="الدورات التدريبية المسجّل بها وشهاداتك الممنوحة." />
+      <PageHeader title="الدورات والشهادات" description="الدورات التدريبية المسجّل بها وشهاداتك الممنوحة." />
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BookOpen className="h-4 w-4 text-brand-600" /> دوراتي المسجلة
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {rows.map((en) => (
-            <div key={en._id} className="flex items-center justify-between rounded-lg border-[0.5px] border-border-subtle p-3">
-              <div className="min-w-0">
-                <p className="font-medium text-text-primary">📘 {en.course?.title || "—"}</p>
-                <p className="mt-0.5 text-xs text-text-muted">
-                  {en.course?.periodText || "—"} · {courseStatusLabel(en.course?.status)}
-                  {en.completed ? " · ✔️ مكتملة" : ""}
-                </p>
-              </div>
-              {en.certificate && (
-                <span className="shrink-0 rounded-full bg-success-bg px-2 py-0.5 text-xs text-success-text">شهادة صادرة</span>
-              )}
+      <Section
+        title="دوراتي"
+        status={courses.status}
+        reload={courses.reload}
+        count={courses.data.length}
+        empty="لم تُسجَّل في أي دورة بعد"
+        failed="تعذّر تحميل الدورات"
+      >
+        {courses.data.map((en) => (
+          <li key={en._id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0">
+            <div className="min-w-0">
+              <p dir="auto" className="font-semibold text-text-primary">
+                {en.course?.title || "—"}
+              </p>
+              <p className="mt-0.5 text-xs text-text-tertiary">{en.course?.periodText || "—"}</p>
             </div>
-          ))}
-          {!rows.length && <p className="py-8 text-center text-text-secondary">لا توجد دورات مسجلة.</p>}
-        </CardContent>
-      </Card>
+            <div className="flex flex-wrap gap-2">
+              {en.course?.status ? (
+                <StatusBadge tone={COURSE_STATUS_TONE[en.course.status]}>{courseStatusLabel(en.course.status)}</StatusBadge>
+              ) : null}
+              {en.certificate ? <StatusBadge tone="success">شهادة صادرة</StatusBadge> : null}
+            </div>
+          </li>
+        ))}
+      </Section>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BadgeCheck className="h-4 w-4 text-success-text" /> شهاداتي
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {certs.map((c) => (
-            <div key={c._id} className="flex items-center justify-between rounded-lg border-[0.5px] border-border-subtle p-3">
-              <div className="min-w-0">
-                <p className="font-medium text-text-primary">🎖️ {c.certTitleEn || c.title}</p>
-                <p className="mt-0.5 text-xs text-text-muted">
-                  رقم الشهادة: {c.serial || "—"} · {dt(c.issuedAt)}
-                </p>
-              </div>
-              {(c.certificate_image || c.certificate_link) && (
-                <a
-                  href={c.certificate_image || c.certificate_link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="shrink-0 text-sm text-brand-600 underline"
-                >
-                  تحميل
-                </a>
-              )}
+      <Section
+        title="شهاداتي"
+        status={certs.status}
+        reload={certs.reload}
+        count={certs.data.length}
+        empty="لا توجد شهادات ممنوحة بعد"
+        failed="تعذّر تحميل الشهادات"
+      >
+        {certs.data.map((c) => (
+          <li key={c._id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0">
+            <div className="min-w-0">
+              <p dir="auto" className="font-semibold text-text-primary">
+                {c.certTitleEn || c.title}
+              </p>
+              <p className="mt-0.5 text-xs text-text-tertiary">
+                رقم الشهادة <span className="ltr font-mono">{c.serial || "—"}</span> ·{" "}
+                <span className="num">{formatDate(c.issuedAt)}</span>
+              </p>
             </div>
-          ))}
-          {!certs.length && <p className="py-8 text-center text-text-secondary">لا توجد شهادات ممنوحة بعد.</p>}
-        </CardContent>
-      </Card>
+            {c.certificate_image || c.certificate_link ? (
+              <a
+                href={c.certificate_image || c.certificate_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-brand-strong underline underline-offset-4"
+              >
+                عرض الشهادة
+                <ExternalLink className="icon-dir size-4" aria-hidden="true" />
+                <span className="sr-only">(يفتح في نافذة جديدة)</span>
+              </a>
+            ) : null}
+          </li>
+        ))}
+      </Section>
     </div>
   );
 };

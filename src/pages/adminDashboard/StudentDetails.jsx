@@ -1,399 +1,179 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { ExternalLink } from "lucide-react";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
+import { Chip } from "../../components/ui/Badge";
+import { EmptyState } from "../../components/ui/Feedback";
+import { formatDate } from "../../utils/format";
 
-const StudentDetails = ({ user, category }) => {
-  if (!user || !category) return null;
+const CATEGORY_TITLES = {
+  reports: "التقارير",
+  tickets: "التذاكر",
+  certificates: "الشهادات",
+  financialReports: "التقارير المالية",
+  userAchievements: "الإنجازات",
+  courses: "الدورات",
+};
 
-  const renderCategoryDetails = () => {
-    switch (category) {
-      case "reports":
-        return user.reports?.length > 0 ? (
-          <div className="space-y-6">
-            {user.reports.map((report, index) => (
-              <div
-                key={index}
-                className="border border-gray-300 p-6 rounded-lg bg-blue-50"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-gray-800">
-                    {report.title}
-                  </h3>
-                  <div className="flex flex-col items-end space-y-1">
-                    {report.date_of_report && (
-                      <span className="bg-blue-100 text-blue-700 text-sm font-medium px-3 py-1 rounded-full">
-                        Report Date:{" "}
-                        {new Date(report.date_of_report).toLocaleDateString(
-                          "en-US",
-                          {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          }
-                        )}
-                      </span>
-                    )}
-                    {report.createdAt && (
-                      <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                        Created:{" "}
-                        {new Date(report.createdAt).toLocaleDateString("en-US")}
-                      </span>
-                    )}
-                  </div>
-                </div>
+// The record each report links to, in display order.
+const LINKED = [
+  { key: "certificateId", label: "شهادة", body: "description", image: "certificate_image", link: "certificate_link" },
+  { key: "courseId", label: "دورة", body: "description", image: "course_image" },
+  { key: "userAchievementId", label: "إنجاز", body: "description", image: "achievement_image", meta: "category" },
+  { key: "eventId", label: "فعالية", body: "description", image: "photo" },
+  { key: "noteId", label: "ملاحظة", body: "content" },
+  { key: "difficultyId", label: "صعوبة", body: "description" },
+];
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Certificate Section */}
-                  {report.certificateId && (
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold text-green-700 mb-2">
-                        📜 Certificate
-                      </h4>
-                      <p className="font-medium">
-                        {report.certificateId.title}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {report.certificateId.description}
-                      </p>
-                      {report.certificateId.certificate_link && (
-                        <a
-                          href={report.certificateId.certificate_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline text-sm"
-                        >
-                          View Certificate
-                        </a>
-                      )}
-                    </div>
-                  )}
+const ExtLink = ({ href, children }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-1 font-semibold text-brand-strong underline underline-offset-4"
+  >
+    {children}
+    <ExternalLink className="icon-dir size-4" aria-hidden="true" />
+    <span className="sr-only">(يفتح في نافذة جديدة)</span>
+  </a>
+);
 
-                  {/* Course Section */}
-                  {report.courseId && (
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold text-purple-700 mb-2">
-                        📚 Course
-                      </h4>
-                      <p className="font-medium">{report.courseId.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {report.courseId.description}
-                      </p>
-                      {report.courseId.course_image && (
-                        <img
-                          src={report.courseId.course_image}
-                          alt="Course"
-                          className="mt-2 w-20 h-20 object-cover rounded"
-                        />
-                      )}
-                    </div>
-                  )}
+const Thumb = ({ src, alt }) =>
+  src ? (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="mt-2 block w-fit">
+      <img src={src} alt={alt} loading="lazy" className="max-h-40 max-w-xs rounded-md border border-border-default object-cover" />
+    </a>
+  ) : null;
 
-                  {/* Achievement Section */}
-                  {report.userAchievementId && (
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold text-yellow-700 mb-2">
-                        🏆 Achievement
-                      </h4>
-                      <p className="font-medium">
-                        {report.userAchievementId.title}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {report.userAchievementId.description}
-                      </p>
-                      <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded mt-1">
-                        {report.userAchievementId.category}
-                      </span>
-                      {report.userAchievementId.achievement_image && (
-                        <img
-                          src={report.userAchievementId.achievement_image}
-                          alt="Achievement"
-                          className="mt-2 w-20 h-20 object-cover rounded"
-                        />
-                      )}
-                    </div>
-                  )}
+// One item: title, optional chip, body, date, image and link.
+function Item({ title, chip, body, date, image, link }) {
+  return (
+    <li className="py-4 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <h3 dir="auto" className="text-heading-4 text-text-primary">
+          {title || "بدون عنوان"}
+        </h3>
+        {date ? <span className="num text-xs text-text-tertiary">{formatDate(date)}</span> : null}
+      </div>
+      {chip ? <Chip className="mt-1">{chip}</Chip> : null}
+      {body ? (
+        <p dir="auto" className="reading mt-1 whitespace-pre-wrap text-sm text-text-secondary">
+          {body}
+        </p>
+      ) : null}
+      {link ? (
+        <p className="mt-1 text-sm">
+          <ExtLink href={link}>رابط التحقق</ExtLink>
+        </p>
+      ) : null}
+      <Thumb src={image} alt={title || ""} />
+    </li>
+  );
+}
 
-                  {/* Event Section */}
-                  {report.eventId && (
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold text-red-700 mb-2">
-                        🎉 Event
-                      </h4>
-                      <p className="font-medium">{report.eventId.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {report.eventId.description}
-                      </p>
-                      {report.eventId.photo && (
-                        <img
-                          src={report.eventId.photo}
-                          alt="Event"
-                          className="mt-2 w-20 h-20 object-cover rounded"
-                        />
-                      )}
-                    </div>
-                  )}
-
-                  {/* Note Section */}
-                  {report.noteId && (
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold text-indigo-700 mb-2">
-                        📝 Note
-                      </h4>
-                      <p className="font-medium">{report.noteId.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {report.noteId.content}
-                      </p>
-                      {report.noteId.createdAt && (
-                        <span className="text-xs text-gray-500">
-                          Created:{" "}
-                          {new Date(report.noteId.createdAt).toLocaleDateString(
-                            "en-US"
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Difficulty Section */}
-                  {report.difficultyId && (
-                    <div className="bg-white p-4 rounded border border-orange-200">
-                      <h4 className="font-semibold text-orange-700 mb-2">
-                        ⚠️ Difficulty
-                      </h4>
-                      <p className="font-medium">{report.difficultyId.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {report.difficultyId.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+function renderItems(user, category) {
+  switch (category) {
+    case "reports":
+      return (user.reports || []).map((r, i) => (
+        <li key={r._id || i} className="py-4 first:pt-0 last:pb-0">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 dir="auto" className="text-heading-4 text-text-primary">
+              {r.title || "بدون عنوان"}
+            </h3>
+            <span className="num text-xs text-text-tertiary">{formatDate(r.date_of_report || r.createdAt)}</span>
           </div>
-        ) : (
-          <p>No reports available</p>
-        );
-      case "tickets":
-        return user.tickets?.length > 0 ? (
-          <ul>
-            {user.tickets.map(
-              (ticket, index) => (
-                console.log(ticket), (<li key={index}>{ticket.title}</li>)
-              )
-            )}
+          <ul className="mt-3 space-y-3 border-s-2 border-border-default ps-4">
+            {LINKED.filter((l) => r[l.key]).map((l) => {
+              const rec = r[l.key];
+              return (
+                <li key={l.key}>
+                  <p className="text-label-sm text-text-tertiary">{l.label}</p>
+                  <p dir="auto" className="font-semibold text-text-primary">
+                    {rec.title}
+                  </p>
+                  {l.meta && rec[l.meta] ? <Chip className="mt-1">{rec[l.meta]}</Chip> : null}
+                  {rec[l.body] ? (
+                    <p dir="auto" className="reading text-sm text-text-secondary">
+                      {rec[l.body]}
+                    </p>
+                  ) : null}
+                  {l.link && rec[l.link] ? <ExtLink href={rec[l.link]}>رابط التحقق</ExtLink> : null}
+                  <Thumb src={l.image ? rec[l.image] : null} alt={rec.title || ""} />
+                </li>
+              );
+            })}
           </ul>
-        ) : (
-          <p>No tickets available</p>
-        );
-      case "certificates":
-        return user.certificates?.length > 0 ? (
-          <div className="space-y-4">
-            {user.certificates.map((certificate, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 p-4 rounded-lg bg-gray-50"
+        </li>
+      ));
+    case "financialReports":
+      return (user.financialReports || []).map((r, i) => (
+        <Item key={r._id || i} title={r.title} body={r.description} date={r.date_of_report} image={r.financial_report_image} />
+      ));
+    case "tickets":
+      return (user.tickets || []).map((t, i) => <Item key={t._id || i} title={t.title} body={t.description} date={t.createdAt} />);
+    case "certificates":
+      return (user.certificates || []).map((c, i) => (
+        <Item key={c._id || i} title={c.title} body={c.description} link={c.certificate_link} image={c.certificate_image} />
+      ));
+    case "userAchievements":
+      return (user.achievements || []).map((a, i) => (
+        <Item key={a._id || i} title={a.title} chip={a.category} body={a.description} image={a.achievement_image} />
+      ));
+    case "courses":
+      return (user.courses || []).map((c, i) => <Item key={c._id || i} title={c.title} body={c.description} image={c.course_image} />);
+    default:
+      return [];
+  }
+}
+
+/**
+ * One student's records in a category. Rendered with `user` and `category`
+ * props; opened directly at /student/details without them, it explains how
+ * to reach a student instead of showing a blank page.
+ */
+const StudentDetails = ({ user, category }) => {
+  if (!user || !category) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="تفاصيل الطالب" />
+        <Card>
+          <EmptyState
+            kind="first-use"
+            title="لم يُحدَّد طالب"
+            description="افتح الطالب من صفحة تقارير الطلاب أو التحليلات لعرض سجلاته."
+            action={
+              <Link
+                to="/admin-dashboard/reports"
+                className="inline-flex h-10 items-center rounded-md bg-brand-strong px-4 text-sm font-semibold text-brand-on-strong hover:bg-brand-strong-hover"
               >
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {certificate.title}
-                </h3>
+                تقارير الطلاب
+              </Link>
+            }
+          />
+        </Card>
+      </div>
+    );
+  }
 
-                {certificate.description && (
-                  <p className="text-gray-600 mb-3">
-                    <span className="font-medium">Description: </span>
-                    {certificate.description}
-                  </p>
-                )}
-
-                {certificate.certificate_link && (
-                  <div className="mb-2">
-                    <span className="font-medium text-gray-700">
-                      Certificate Link:{" "}
-                    </span>
-                    <a
-                      href={certificate.certificate_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      {certificate.certificate_link}
-                    </a>
-                  </div>
-                )}
-
-                <div className="text-sm text-gray-500">
-                  <span className="font-medium">Certificate Image: </span>
-                  {certificate.certificate_image ? (
-                    <img
-                      src={certificate.certificate_image}
-                      alt={`${certificate.title} certificate`}
-                      className="mt-2 max-w-xs rounded border"
-                    />
-                  ) : (
-                    <span className="italic">No image available</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No certificates available</p>
-        );
-      case "financialReports":
-        return user.financialReports?.length > 0 ? (
-          <div className="space-y-4">
-            {user.financialReports.map((report, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 p-4 rounded-lg bg-green-50"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {report.title}
-                  </h3>
-                  {report.date_of_report && (
-                    <span className="bg-green-100 text-green-700 text-sm font-medium px-3 py-1 rounded-full">
-                      {new Date(report.date_of_report).toLocaleDateString(
-                        "en-US",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        }
-                      )}
-                    </span>
-                  )}
-                </div>
-
-                {report.description && (
-                  <p className="text-gray-600 mb-3">
-                    <span className="font-medium">Description: </span>
-                    {report.description}
-                  </p>
-                )}
-
-                <div className="text-sm text-gray-500">
-                  <span className="font-medium">Report Document: </span>
-                  {report.financial_report_image ? (
-                    <div className="mt-2">
-                      <img
-                        src={report.financial_report_image}
-                        alt={`${report.title} financial report`}
-                        className="max-w-xs rounded border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() =>
-                          window.open(report.financial_report_image, "_blank")
-                        }
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Click to view full size
-                      </p>
-                    </div>
-                  ) : (
-                    <span className="italic">No document available</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No financial reports available</p>
-        );
-      case "userAchievements":
-        return user.achievements?.length > 0 ? (
-          <div className="space-y-4">
-            {user.achievements.map((achievement, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 p-4 rounded-lg bg-gray-50"
-              >
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {achievement.title}
-                </h3>
-
-                {achievement.description && (
-                  <p className="text-gray-600 mb-3">
-                    <span className="font-medium">Description: </span>
-                    {achievement.description}
-                  </p>
-                )}
-
-                {achievement.category && (
-                  <div className="inline-block">
-                    <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                      {achievement.category}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No achievements available</p>
-        );
-      case "courses":
-        return user.courses?.length > 0 ? (
-          <div className="space-y-4">
-            {user.courses.map((course, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 p-4 rounded-lg bg-gray-50"
-              >
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {course.title}
-                </h3>
-
-                {course.description && (
-                  <p className="text-gray-600 mb-3">
-                    <span className="font-medium">Description: </span>
-                    {course.description}
-                  </p>
-                )}
-
-                <div className="text-sm text-gray-500">
-                  <span className="font-medium">Course Image: </span>
-                  {course.course_image ? (
-                    <img
-                      src={course.course_image}
-                      alt={`${course.title} course`}
-                      className="mt-2 max-w-xs rounded border"
-                    />
-                  ) : (
-                    <span className="italic">No image available</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No courses available</p>
-        );
-      default:
-        return <p>No details available</p>;
-    }
-  };
-  const getCategoryTitle = () => {
-    switch (category) {
-      case "reports":
-        return "Reports";
-      case "tickets":
-        return "Tickets";
-      case "certificates":
-        return "Certificates";
-      case "financialReports":
-        return "Financial Reports";
-      case "userAchievements":
-        return "Achievements";
-      case "courses":
-        return "Courses";
-      default:
-        return "Details";
-    }
-  };
+  const items = renderItems(user, category);
+  const title = CATEGORY_TITLES[category] || "التفاصيل";
 
   return (
-    <div className="border p-4 rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">
-        {getCategoryTitle()} for {user.name}
-      </h2>
-      {renderCategoryDetails()}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          {title} · <bdi>{user.name}</bdi>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {items.length ? (
+          <ul className="divide-y divide-border-subtle">{items}</ul>
+        ) : (
+          <EmptyState kind="first-use" compact title={`لا توجد ${title} لهذا الطالب`} />
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

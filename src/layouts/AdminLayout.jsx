@@ -1,42 +1,46 @@
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import Sidebar from "../components/admin/Sidebar";
-import Header from "../components/admin/Header";
+import { AppShell } from "../components/shell/AppShell";
+import { RoleRequestBell } from "../components/shell/RoleRequestBell";
+import { useRoleRequests } from "../hooks/useRoleRequests";
+import { workspaceNav } from "../constants/navigation";
+import { formatRoleAr } from "../components/admin/adminCopy";
+import Forbidden from "../pages/Forbidden";
 
+// Workspace shell for the platform Admin and Employees (Foundation-wide
+// staff). Foundation scope: maroon and gold.
 const AdminLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const user = useSelector((state) => state.auth?.user || {});
-  const role = user?.role || "Employee";
-  const isAdmin = role === "Admin";
+  const user = useSelector((state) => state.auth?.user);
+  const isLoggedIn = useSelector((state) => state.auth?.isLoggedIn);
   const location = useLocation();
+  const role = user?.role;
+  const isAdmin = role === "Admin";
+  const groups = useMemo(() => workspaceNav(user), [user]);
+  const { requests, refresh } = useRoleRequests();
 
-  // Redirect employees away from the admin-only root dashboard
-  if (!isAdmin && location.pathname === "/admin-dashboard") {
+  if (!isLoggedIn) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (role !== "Admin" && role !== "Employee") return <Forbidden />;
+  // Employees never see the Admin-only area; send them to their own home.
+  if (!isAdmin && location.pathname.startsWith("/admin-dashboard")) {
     return <Navigate to="/employee-dashboard" replace />;
   }
 
-  // Creative differentiation: Employee gets clean white card background, Admin gets standard parchment
-  const pageBg = isAdmin ? "bg-surface-page" : "bg-neutral-50";
+  const home = isAdmin ? "/admin-dashboard" : "/employee-dashboard";
 
   return (
-    <div
-      className={`flex h-[100dvh] min-h-0 ${pageBg} text-text-primary`}
-      dir="rtl"
-      lang="ar"
+    <AppShell
+      groups={groups}
+      homeHref={home}
+      title="مساحة العمل"
+      subtitle="مؤسسة مواهب"
+      section={{ label: "مساحة العمل", to: home }}
+      roleLabel={formatRoleAr(role)}
+      counts={{ roleRequests: requests.length }}
+      topbarEnd={isAdmin ? <RoleRequestBell requests={requests} onOpen={refresh} /> : null}
     >
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-      <div className="relative z-40 flex min-h-0 min-w-0 flex-1 flex-col">
-        <Header setSidebarOpen={setSidebarOpen} />
-
-        <main className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </div>
+      <Outlet />
+    </AppShell>
   );
 };
 

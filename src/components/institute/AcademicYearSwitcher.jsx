@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import instituteApi from "../../services/api/instituteApi";
 import { setYears, setSelectedYear } from "../../features/institute/academicYearSlice";
 
-// Global academic-year scope selector shown in the portal header.
+// Global academic-year scope selector shown in the portal top bar.
 // Loads the year list once, then drives the `academicYear` Redux scope that
 // every institute data call reads.
 const AcademicYearSwitcher = () => {
@@ -28,22 +28,20 @@ const AcademicYearSwitcher = () => {
   }, [loaded, dispatch]);
 
   return (
-    <label className="flex items-center gap-2 rounded-md border-[0.5px] border-brand-700/80 bg-brand-800/50 px-2.5 py-1.5">
-      <CalendarDays className="h-4 w-4 shrink-0 text-accent-400" aria-hidden="true" />
-      <span className="sr-only">العام الدراسي المعروض حالياً</span>
+    <label className="flex h-9 items-center gap-2 rounded-md border border-border-control bg-surface ps-2.5 hover:border-neutral-600">
+      <CalendarDays className="size-4 shrink-0 text-text-tertiary" aria-hidden="true" />
+      <span className="sr-only">العام الدراسي المعروض</span>
       <select
         value={selectedYearId || ""}
         onChange={(e) => dispatch(setSelectedYear(e.target.value))}
-        className="max-w-[190px] cursor-pointer bg-transparent text-[13px] font-medium text-text-inverse focus:outline-none"
+        className="num h-full max-w-[44vw] cursor-pointer bg-transparent pe-2 text-sm font-semibold text-text-primary outline-none sm:max-w-[200px]"
       >
         {years.map((y) => (
-          <option key={y._id} value={y._id} className="text-text-primary">
+          <option key={y._id} value={y._id}>
             {y.name} {y.isActive ? "(النشط)" : ""}
           </option>
         ))}
-        <option value="all" className="text-text-primary">
-          📊 جميع الأعوام (تراكمي)
-        </option>
+        <option value="all">جميع الأعوام (تراكمي)</option>
       </select>
     </label>
   );

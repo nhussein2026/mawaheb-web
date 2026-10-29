@@ -1,36 +1,50 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { toast } from "react-toastify";
-import { PlaneTakeoff, Send } from "lucide-react";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
-import { labelCls, textareaCls } from "../../components/institute/formStyles";
+import { Field, Input, Textarea, RequiredNote } from "../../components/ui/Input";
+import { Callout } from "../../components/ui/Feedback";
+import { StatusBadge } from "../../components/ui/Badge";
+import { HistoryCard, HistoryItem } from "../../components/ui/HistoryCard";
+import { useResource } from "../../hooks/useResource";
 import instituteApi from "../../services/api/instituteApi";
-import { leaveStatusLabel } from "../../constants/institute";
+import { leaveStatusLabel, LEAVE_STATUS_TONE } from "../../constants/institute";
+import { formatDateTime } from "../../utils/format";
 
-const dt = (d) => (d ? new Date(d).toLocaleString("ar") : "—");
 const emptyForm = { departureAt: "", returnAt: "", reason: "" };
 
+const validate = (f) => {
+  const e = {};
+  if (!f.departureAt) e.departureAt = "يُرجى إدخال تاريخ ووقت المغادرة";
+  if (!f.returnAt) e.returnAt = "يُرجى إدخال تاريخ ووقت العودة";
+  else if (f.departureAt && new Date(f.returnAt) <= new Date(f.departureAt))
+    e.returnAt = "يجب أن يكون موعد العودة بعد موعد المغادرة";
+  if (!f.reason.trim()) e.reason = "يُرجى كتابة سبب الاستئذان والوجهة";
+  return e;
+};
+
 const Leave = () => {
-  const [rows, setRows] = useState([]);
+  const { data: rows, status, reload } = useResource(() => instituteApi.getMyLeave(), [], { initial: [] });
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = () =>
-    instituteApi
-      .getMyLeave()
-      .then((res) => setRows(res.data?.data || []))
-      .catch(() => toast.error("تعذر تحميل الطلبات"));
-
-  useEffect(() => {
-    load();
-  }, []);
+  const set = (k) => (e) => {
+    const next = { ...form, [k]: e.target.value };
+    setForm(next);
+    if (errors[k]) setErrors(validate(next));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.departureAt || !form.returnAt || !form.reason.trim()) {
-      toast.warn("تاريخ المغادرة والعودة والسبب مطلوبة");
+    const found = validate(form);
+    setErrors(found);
+    setFormError("");
+    const first = ["departureAt", "returnAt", "reason"].find((k) => found[k]);
+    if (first) {
+      document.getElementById(`leave-${first}`)?.focus();
       return;
     }
     setSaving(true);
@@ -38,9 +52,9 @@ const Leave = () => {
       await instituteApi.submitLeave(form);
       toast.success("تم إرسال طلب الاستئذان");
       setForm(emptyForm);
-      load();
+      reload();
     } catch {
-      toast.error("تعذر إرسال الطلب");
+      setFormError("تعذّر إرسال الطلب ولم يُحفظ. يُرجى المحاولة مرة أخرى.");
     } finally {
       setSaving(false);
     }
@@ -48,74 +62,53 @@ const Leave = () => {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="طلبات الاستئذان" description="قدّم طلب استئذان ومغادرة وتابع قرار المشرف." />
+      <PageHeader title="طلبات الاستئذان" description="قدّم طلب استئذان وتابع قرار المشرف." />
 
-      <Card className="border-none shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <PlaneTakeoff className="h-4 w-4 text-accent-600" /> طلب استئذان جديد
-          </CardTitle>
+          <CardTitle>طلب استئذان</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelCls}>🛫 تاريخ ووقت المغادرة *</label>
-                <Input
-                  type="datetime-local"
-                  value={form.departureAt}
-                  onChange={(e) => setForm((f) => ({ ...f, departureAt: e.target.value }))}
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <label className={labelCls}>🛬 تاريخ ووقت العودة *</label>
-                <Input
-                  type="datetime-local"
-                  value={form.returnAt}
-                  onChange={(e) => setForm((f) => ({ ...f, returnAt: e.target.value }))}
-                  dir="ltr"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelCls}>سبب الاستئذان والوجهة *</label>
-                <textarea
-                  className={textareaCls}
-                  rows={3}
-                  value={form.reason}
-                  onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
-                />
-              </div>
+          <form onSubmit={submit} noValidate className="max-w-[720px] space-y-4">
+            {formError ? <Callout tone="danger">{formError}</Callout> : null}
+            <RequiredNote />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="موعد المغادرة" required error={errors.departureAt} id="leave-departureAt">
+                <Input type="datetime-local" value={form.departureAt} onChange={set("departureAt")} dir="ltr" />
+              </Field>
+              <Field label="موعد العودة" required error={errors.returnAt} id="leave-returnAt">
+                <Input type="datetime-local" value={form.returnAt} onChange={set("returnAt")} dir="ltr" />
+              </Field>
             </div>
-            <Button type="submit" disabled={saving}>
-              <Send className="h-4 w-4" /> إرسال الطلب
-            </Button>
+            <Field label="سبب الاستئذان والوجهة" required error={errors.reason} id="leave-reason">
+              <Textarea value={form.reason} onChange={set("reason")} dir="auto" />
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" loading={saving}>
+                إرسال الطلب
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base">طلباتي</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {rows.map((r) => (
-            <div key={r._id} className="rounded-lg border-[0.5px] border-border-subtle p-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm text-text-primary">
-                  🛫 {dt(r.departureAt)} → 🛬 {dt(r.returnAt)}
-                </p>
-                <span className="shrink-0 text-xs">{leaveStatusLabel(r.status)}</span>
-              </div>
-              <p className="mt-1 text-sm text-text-secondary">{r.reason}</p>
-              {r.supervisorNotes && (
-                <p className="mt-1 text-xs text-brand-700">ملاحظات المشرف: {r.supervisorNotes}</p>
-              )}
-            </div>
-          ))}
-          {!rows.length && <p className="py-8 text-center text-text-secondary">لا توجد طلبات.</p>}
-        </CardContent>
-      </Card>
+      <HistoryCard title="طلباتي" status={status} onRetry={reload} count={rows.length} empty="لم تقدّم أي طلب بعد" failed="تعذّر تحميل الطلبات">
+        {rows.map((r) => (
+          <HistoryItem
+            key={r._id}
+            title={
+              <span className="num">
+                {formatDateTime(r.departureAt)} إلى {formatDateTime(r.returnAt)}
+              </span>
+            }
+            status={<StatusBadge tone={LEAVE_STATUS_TONE[r.status]}>{leaveStatusLabel(r.status)}</StatusBadge>}
+            reply={r.supervisorNotes}
+            replyLabel="ملاحظات المشرف"
+          >
+            {r.reason}
+          </HistoryItem>
+        ))}
+      </HistoryCard>
     </div>
   );
 };

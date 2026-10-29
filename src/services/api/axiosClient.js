@@ -1,6 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const SESSION_EXPIRED_EVENT = 'mawaheb:session-expired';
+
+const BASE_URL = API_BASE_URL;
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,
@@ -24,10 +27,10 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Handle global 401 Unauthorized
-      console.warn('Unauthorized access - please log in again.');
-      // Optional: window.location.href = '/login';
+    // A 401 for a signed-in user means the session ended; the app shell
+    // listens for this event and asks the user to sign in again.
+    if (error.response && error.response.status === 401 && localStorage.getItem('token')) {
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
     }
     return Promise.reject(error);
   }

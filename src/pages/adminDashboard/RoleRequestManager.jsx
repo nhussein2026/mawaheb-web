@@ -1,167 +1,112 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { Card, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { UserCheck, UserX, Clock, User, Mail, Shield } from "lucide-react";
 import { toast } from "react-toastify";
-
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { StatusBadge, Count } from "../../components/ui/Badge";
+import { PersonCell } from "../../components/ui/PersonCell";
+import { EmptyState, SkeletonRows } from "../../components/ui/Feedback";
+import { useConfirm } from "../../components/ui/confirmContext";
+import { useResource } from "../../hooks/useResource";
 import { formatRoleAr } from "../../components/admin/adminCopy";
 import { dispatchRoleRequestsRefresh } from "../../components/admin/adminRoleRequestEvents";
+import { API_BASE_URL } from "../../services/api/config";
+import { formatRelative } from "../../utils/format";
 
+// Review queue for membership requests, oldest first (§4.9 "Sorting").
 export default function RoleRequestManager() {
   const token = useSelector((state) => state.auth.token);
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const confirm = useConfirm();
+  const [busyId, setBusyId] = useState(null);
 
-  const fetchRequests = async () => {
+  const { data, status, reload } = useResource(
+    async () => {
+      const res = await fetch(`${API_BASE_URL}/user/admin/role-requests`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
+    [token],
+    { initial: [], select: (json) => (json?.success && Array.isArray(json.data) ? json.data : []) }
+  );
+
+  const requests = useMemo(
+    () => [...data].sort((a, b) => new Date(a.updatedAt || a.createdAt || 0) - new Date(b.updatedAt || b.createdAt || 0)),
+    [data]
+  );
+
+  const handleAction = async (request, decision) => {
+    const approve = decision === "Approved";
+    const ok = await confirm({
+      title: approve ? `قبول طلب ${request.name}؟` : `رفض طلب ${request.name}؟`,
+      body: approve
+        ? `سيصبح دوره «${formatRoleAr(request.requestedRole)}» وتتاح له صفحاته بعد تسجيل دخوله التالي.`
+        : "سيبقى دوره الحالي كما هو، ويمكنه تقديم طلب جديد.",
+      confirmLabel: approve ? "قبول الطلب" : "رفض الطلب",
+      destructive: !approve,
+    });
+    if (!ok) return;
+    setBusyId(request._id);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/admin/role-requests`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setRequests(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching requests:", error);
-      toast.error("فشل تحميل طلبات الأدوار");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRequests();
-  }, [token]);
-
-  const handleAction = async (userId, status) => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user/admin/role-requests/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/user/admin/role-requests/${request._id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: decision }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success(`تم ${status === "Approved" ? "قبول" : "رفض"} الطلب بنجاح`);
-        await fetchRequests();
-        dispatchRoleRequestsRefresh();
-      } else {
-        toast.error(data.message || "فشل معالجة الطلب");
-      }
-    } catch (error) {
-      console.error("Error handling request:", error);
-      toast.error("حدث خطأ أثناء معالجة الطلب");
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok || !json.success) throw new Error(json.message);
+      toast.success(approve ? "تم قبول الطلب" : "تم رفض الطلب");
+      await reload();
+      dispatchRoleRequestsRefresh();
+    } catch (err) {
+      toast.error(err.message || "تعذّر معالجة الطلب. يُرجى المحاولة مرة أخرى.");
+    } finally {
+      setBusyId(null);
     }
   };
-
-  if (loading) {
-    return (
-      <>
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div
-            className="h-10 w-10 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600"
-            aria-hidden="true"
-          />
-        </div>
-      </>
-    );
-  }
 
   return (
-    <>
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="طلبات تعديل الأدوار"
-          description="إدارة طلبات المستخدمين لاعتماد أدوار جديدة في المنصة."
-        />
+    <div className="space-y-6">
+      <PageHeader
+        title="طلبات الأدوار"
+        description="طلبات المستخدمين للحصول على دور في المنصة، الأقدم أولًا."
+        status={status === "ready" && requests.length ? <Count value={requests.length} label={`${requests.length} طلبات`} /> : null}
+      />
 
-        <div className="grid gap-4">
-          {requests.length === 0 ? (
-            <Card className="border-dashed border-border-default">
-              <CardContent className="flex flex-col items-center py-14 text-center">
-                <Clock className="mb-4 h-12 w-12 text-text-muted" />
-                <h3 className="text-base font-medium text-text-primary">لا توجد طلبات معلقة</h3>
-                <p className="mt-1 max-w-md text-sm text-text-secondary">
-                  سيظهر هنا طلبات المستخدمين فور تقديمها.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            requests.map((request) => (
-              <Card key={request._id}>
-                <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
-                  <div className="flex shrink-0 items-center justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-brand-600 ring-1 ring-border-subtle">
-                      <User className="h-8 w-8" aria-hidden="true" />
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 flex-1 space-y-2 text-center md:text-start">
-                    <h3 className="text-lg font-medium text-text-primary">{request.name}</h3>
-                    <div className="flex flex-wrap justify-center gap-4 text-sm text-text-secondary md:justify-start">
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-4 w-4 shrink-0" />
-                        <span>{request.email}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Shield className="h-4 w-4 shrink-0" />
-                        <span>الدور الحالي: {formatRoleAr(request.role)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-2 rounded-md border-[0.5px] border-border-subtle bg-surface-page px-4 py-3 md:items-end">
-                    <span className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">
-                      الدور المطلوب
-                    </span>
-                    <span className="text-base font-medium text-text-brand">
-                      {formatRoleAr(request.requestedRole)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap justify-center gap-2 md:justify-end">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      className="rounded-md"
-                      onClick={() => handleAction(request._id, "Approved")}
-                    >
-                      <UserCheck className="ms-1.5 h-4 w-4" />
-                      قبول
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      className="rounded-md"
-                      onClick={() => handleAction(request._id, "Rejected")}
-                    >
-                      <UserX className="ms-1.5 h-4 w-4" />
-                      رفض
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      </div>
-    </>
+      <Card>
+        {status === "loading" ? (
+          <SkeletonRows rows={4} />
+        ) : status === "failed" ? (
+          <EmptyState kind="failed" title="تعذّر تحميل طلبات الأدوار" onRetry={reload} />
+        ) : requests.length === 0 ? (
+          <EmptyState kind="all-done" title="لا توجد طلبات بانتظار المراجعة" />
+        ) : (
+          <ul className="divide-y divide-border-subtle">
+            {requests.map((r) => (
+              <li key={r._id} className="flex flex-col gap-3 px-4 py-4 sm:px-6 md:flex-row md:items-center">
+                <div className="min-w-0 flex-1">
+                  <PersonCell name={r.name} secondary={r.email} secondaryLtr src={r.imageUrl} />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary md:w-72">
+                  <StatusBadge>{formatRoleAr(r.role)}</StatusBadge>
+                  <span aria-hidden="true">إلى</span>
+                  <span className="sr-only">يطلب دور</span>
+                  <StatusBadge tone="info">{formatRoleAr(r.requestedRole)}</StatusBadge>
+                  {r.updatedAt ? <span className="num text-xs text-text-tertiary">{formatRelative(r.updatedAt)}</span> : null}
+                </div>
+                <div className="flex gap-2 max-md:[&>*]:flex-1">
+                  <Button variant="danger-secondary" size="sm" disabled={busyId === r._id} onClick={() => handleAction(r, "Rejected")}>
+                    رفض
+                  </Button>
+                  <Button size="sm" loading={busyId === r._id} onClick={() => handleAction(r, "Approved")}>
+                    قبول
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

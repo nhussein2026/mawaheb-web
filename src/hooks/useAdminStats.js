@@ -1,43 +1,47 @@
-import { useState, useEffect } from 'react';
-import { adminApi } from '../services/api/adminApi';
-import { useSelector } from 'react-redux';
+import { useSelector } from "react-redux";
+import { adminApi } from "../services/api/adminApi";
+import { useResource } from "./useResource";
 
+const LOADING = { stats: "loading", roles: "loading", financial: "loading" };
+
+// Admin overview data. Each source settles on its own so one failure shows a
+// Retry on its card while the rest of the dashboard still renders (§5.1).
 export const useAdminStats = () => {
   const token = useSelector((state) => state.auth?.token);
-  const [stats, setStats] = useState(null);
-  const [pendingRoleRequests, setPendingRoleRequests] = useState(null);
-  const [financialCount, setFinancialCount] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [statsRes, rrRes, finRes] = await Promise.all([
-          adminApi.getStats(),
-          adminApi.getRoleRequests(),
-          adminApi.getFinancialReports(),
-        ]);
+  const { data, status: overall, reload } = useResource(
+    async () => {
+      if (!token) return null;
+      const [statsRes, rrRes, finRes] = await Promise.allSettled([
+        adminApi.getStats(),
+        adminApi.getRoleRequests(),
+        adminApi.getFinancialReports(),
+      ]);
+      const list =
+        rrRes.status === "fulfilled" && rrRes.value.data?.success && Array.isArray(rrRes.value.data.data)
+          ? rrRes.value.data.data
+          : [];
+      return {
+        stats: statsRes.status === "fulfilled" ? statsRes.value.data : null,
+        pendingRoleRequests: rrRes.status === "fulfilled" ? list.length : null,
+        financialCount:
+          finRes.status === "fulfilled" ? (Array.isArray(finRes.value.data) ? finRes.value.data.length : 0) : null,
+        status: {
+          stats: statsRes.status === "fulfilled" ? "ready" : "failed",
+          roles: rrRes.status === "fulfilled" ? "ready" : "failed",
+          financial: finRes.status === "fulfilled" ? "ready" : "failed",
+        },
+      };
+    },
+    [token],
+    { initial: null, select: (d) => d }
+  );
 
-        setStats(statsRes.data);
-
-        const list = rrRes.data.success && Array.isArray(rrRes.data.data) ? rrRes.data.data : [];
-        setPendingRoleRequests(list.length);
-
-        setFinancialCount(Array.isArray(finRes.data) ? finRes.data.length : 0);
-      } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.message || err.message || "حدث خطأ غير متوقع");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (token) load();
-    else setLoading(false);
-  }, [token]);
-
-  return { stats, pendingRoleRequests, financialCount, loading, error };
+  return {
+    stats: data?.stats ?? null,
+    pendingRoleRequests: data?.pendingRoleRequests ?? null,
+    financialCount: data?.financialCount ?? null,
+    status: overall === "ready" && data ? data.status : LOADING,
+    reload,
+  };
 };

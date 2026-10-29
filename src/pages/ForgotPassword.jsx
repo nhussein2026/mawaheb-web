@@ -1,87 +1,94 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "../components/ui/Button";
+import { Field, Input } from "../components/ui/Input";
+import { Callout } from "../components/ui/Feedback";
+import { AuthCard, authLinkCls } from "../components/ui/AuthCard";
+import { API_BASE_URL } from "../services/api/config";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Password reset request. The confirmation never reveals whether an account
+// exists for the address.
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [formError, setFormError] = useState("");
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // validate email 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
-  }
+  const validate = (v) =>
+    !v.trim() ? "يُرجى إدخال البريد الإلكتروني" : !EMAIL_RE.test(v.trim()) ? "يُرجى إدخال بريد إلكتروني صحيح، مثل name@example.com" : "";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateEmail(email)) {
-      setError("Invalid email address");
+    const err = validate(email);
+    setError(err);
+    setFormError("");
+    if (err) {
+      document.getElementById("forgot-email")?.focus();
       return;
     }
+    setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/forgot-Password`,
-        {
-          // Update this URL to match your backend
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        }
-      )
-      .then((response) => {
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error("Email is not found!")
-          } else {
-            throw new Error("Server error")
-          }
-        }
-        return response.json();
-      })
-      .then((data) => {
-        setSuccess("Email sent Successfully!!")
-      })
-    
-    } catch (error) {
-      setError("Failed to send reset email");
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-Password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (response.ok || response.status === 404) setSent(true);
+      else setFormError("حدث خطأ من جهتنا ولم يُرسل الرابط. يُرجى المحاولة بعد قليل.");
+    } catch {
+      setFormError("تعذّر الاتصال بالخادم. يُرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white p-8 shadow-md rounded-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-700 text-center">
-          Reset Your Password
-        </h2>
-        {error && <div className="mb-4 text-red-600">{error}</div>}
-        {success && <div className="mb-4 text-green-600">{success}</div>}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className="block text-gray-600 font-semibold mb-2"
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition duration-300"
-          >
-            Send Reset Link
-          </button>
-        </form>
-      </div>
-    </div>
+    <AuthCard
+      title="استعادة كلمة المرور"
+      description="أدخل بريدك الإلكتروني لنرسل إليك رابط إعادة التعيين"
+      footer={
+        <Link to="/login" className={authLinkCls}>
+          العودة إلى تسجيل الدخول
+        </Link>
+      }
+    >
+      {sent ? (
+        <Callout tone="success" title="تحقق من بريدك الإلكتروني">
+          إن كان هناك حساب مرتبط بالعنوان <bdi className="font-semibold">{email.trim()}</bdi>، فستصلك رسالة فيها رابط
+          لإعادة تعيين كلمة المرور خلال دقائق.
+        </Callout>
+      ) : (
+        <>
+          {formError ? (
+            <Callout tone="danger" className="mb-5">
+              {formError}
+            </Callout>
+          ) : null}
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <Field label="البريد الإلكتروني" error={error} id="forgot-email">
+              <Input
+                type="email"
+                dir="ltr"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(validate(e.target.value));
+                }}
+                onBlur={(e) => e.target.value && setError(validate(e.target.value))}
+              />
+            </Field>
+            <Button type="submit" size="lg" className="w-full" loading={loading}>
+              إرسال الرابط
+            </Button>
+          </form>
+        </>
+      )}
+    </AuthCard>
   );
 };
 

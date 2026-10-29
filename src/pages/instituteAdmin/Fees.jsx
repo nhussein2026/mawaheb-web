@@ -1,40 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Wallet, Users, CheckCircle2, AlertTriangle, Save } from "lucide-react";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import { Button, IconButton } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/DataTable";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableStateRow } from "../../components/ui/DataTable";
 import StatGrid from "../../components/institute/StatGrid";
 import instituteApi from "../../services/api/instituteApi";
 
-const fmt = (d) => (d ? new Date(d).toISOString().slice(0, 10) : "—");
+import { StatusBadge } from "../../components/ui/Badge";
+import { useConfirm } from "../../components/ui/confirmContext";
+import { EmptyState, Callout } from "../../components/ui/Feedback";
+import { formatDate } from "../../utils/format";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
+const fmt = (d) => formatDate(d);
 
 const InstallmentCell = ({ inst, onToggle }) => {
-  if (!inst) return <TableCell className="text-text-muted">—</TableCell>;
+  if (!inst) return <TableCell className="text-text-tertiary">—</TableCell>;
   return (
     <TableCell>
-      <div className="space-y-1">
-        <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs ${
-            inst.isPaid ? "bg-success-bg text-success-text" : "bg-error-bg text-error-text"
-          }`}
-        >
-          {inst.isPaid ? "✔️ مدفوع" : "❌ غير مدفوع"} ({inst.amount})
-        </span>
-        <p className="text-xs text-text-muted">الاستحقاق: {fmt(inst.dueDate)}</p>
-        <button
-          onClick={() => onToggle(inst)}
-          className={`rounded px-2 py-1 text-xs ${
-            inst.isPaid
-              ? "bg-error-bg text-error-text hover:opacity-80"
-              : "bg-success-bg text-success-text hover:opacity-80"
-          }`}
-        >
-          {inst.isPaid ? "❌ إلغاء السداد" : "✔️ إثبات السداد"}
-        </button>
+      <div className="flex flex-col items-start gap-1">
+        <StatusBadge tone={inst.isPaid ? "success" : "warning"}>
+          {inst.isPaid ? "مدفوع" : "غير مدفوع"} · <span className="num">{inst.amount}</span>
+        </StatusBadge>
+        <span className="num text-xs text-text-tertiary">الاستحقاق: {fmt(inst.dueDate)}</span>
+        <Button variant={inst.isPaid ? "tertiary" : "secondary"} size="sm" onClick={() => onToggle(inst)}>
+          {inst.isPaid ? "إلغاء إثبات السداد" : "إثبات السداد"}
+        </Button>
       </div>
     </TableCell>
   );
@@ -42,11 +36,12 @@ const InstallmentCell = ({ inst, onToggle }) => {
 
 const Fees = () => {
   const year = useSelector((s) => s.academicYear.selectedYearId);
-  const [stats, setStats] = useState({});
+  const confirm = useConfirm();
+  const [loadError, setLoadError] = useState("");  const [stats, setStats] = useState({});
   const [rows, setRows] = useState([]);
   const [totals, setTotals] = useState({}); // studentId -> editable total
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const [st, list] = await Promise.all([
         instituteApi.getFeeStats(year),
@@ -58,15 +53,13 @@ const Fees = () => {
       const t = {};
       data.forEach((r) => (t[r.student._id] = r.fee?.totalAnnual ?? 0));
       setTotals(t);
+      setLoadError("");
     } catch {
-      toast.error("تعذر تحميل بيانات الرسوم");
+      setLoadError("تعذّر تحميل بيانات الرسوم");
     }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year]);
+
+  useLoadEffect(load);
 
   const saveTotal = async (studentId) => {
     try {
@@ -74,19 +67,19 @@ const Fees = () => {
       toast.success("تم تحديث إجمالي الرسوم");
       load();
     } catch {
-      toast.error("تعذر تحديث الرسوم");
+      toast.error("تعذّر تحديث الرسوم");
     }
   };
 
   const toggle = async (inst) => {
     const verb = inst.isPaid ? "إلغاء سداد" : "إثبات سداد";
-    if (!window.confirm(`تأكيد ${verb} هذا القسط؟`)) return;
+    if (!(await confirm({ title: `${verb} القسط؟`, body: "يتغير وضع السداد لهذا القسط ويظهر ذلك للطالب ولولي الأمر.", confirmLabel: `${verb} القسط` }))) return;
     try {
       await instituteApi.toggleInstallment(inst._id);
       toast.success("تم تحديث حالة السداد");
       load();
     } catch {
-      toast.error("تعذر تحديث حالة السداد");
+      toast.error("تعذّر تحديث حالة السداد");
     }
   };
 
@@ -96,6 +89,11 @@ const Fees = () => {
         title="الرسوم والأقساط"
         description="متابعة الرسوم السنوية لطلاب المقاعد المدفوعة على قسطين، وتحديث حالة السداد."
       />
+      {loadError ? (
+        <Callout tone="danger" title={loadError} action={<Button variant="secondary" size="sm" onClick={() => load()}>إعادة المحاولة</Button>}>
+          يُرجى التحقق من الاتصال والمحاولة مرة أخرى.
+        </Callout>
+      ) : null}
 
       <StatGrid
         cols={3}
@@ -106,13 +104,13 @@ const Fees = () => {
         ]}
       />
 
-      <Card className="border-none shadow-sm">
+      <Card className="">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-4 w-4 text-accent-600" /> جدول الرسوم والأقساط
+            <Wallet className="size-5 text-text-tertiary" aria-hidden="true" /> جدول الرسوم والأقساط
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="px-0 pb-0 pt-0 sm:px-0 sm:pb-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -139,9 +137,7 @@ const Fees = () => {
                           className="h-8 w-24"
                           dir="ltr"
                         />
-                        <button onClick={() => saveTotal(r.student._id)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50" aria-label="حفظ">
-                          <Save className="h-4 w-4" />
-                        </button>
+                        <IconButton label="حفظ" size="sm" tone="brand" onClick={() => saveTotal(r.student._id)}><Save /></IconButton>
                       </div>
                     </TableCell>
                     <InstallmentCell inst={inst1} onToggle={toggle} />
@@ -150,11 +146,9 @@ const Fees = () => {
                 );
               })}
               {!rows.length && (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-text-secondary">
-                    لا يوجد طلاب مقاعد مدفوعة.
-                  </TableCell>
-                </TableRow>
+                <TableStateRow colSpan={4}>
+                  <EmptyState compact kind="first-use" title="لا يوجد طلاب مقاعد مدفوعة" />
+                </TableStateRow>
               )}
             </TableBody>
           </Table>

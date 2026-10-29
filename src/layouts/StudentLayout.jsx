@@ -1,30 +1,31 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { Outlet } from 'react-router-dom';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
+import React, { useMemo } from "react";
+import { useSelector } from "react-redux";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { AppShell } from "../components/shell/AppShell";
+import { studentNav } from "../constants/navigation";
+import { formatRoleAr } from "../components/admin/adminCopy";
 
+// Student portal (Scholarship students and general users). Student-facing
+// portals use the Foundation identity.
 const StudentLayout = () => {
-  const user = useSelector((state) => state.auth?.user || {});
-  const role = user?.role || "Institute Student";
-  const isScholarship = role === "Scholarship Student";
+  const user = useSelector((state) => state.auth?.user);
+  const isLoggedIn = useSelector((state) => state.auth?.isLoggedIn);
+  const location = useLocation();
+  const groups = useMemo(() => studentNav(user), [user]);
 
-  // Creative differentiation: Scholarship students get the prestigious Gold-tinted background
-  // Institute students get the standard clean parchment background
-  const pageBg = isScholarship ? "bg-accent-50" : "bg-surface-page";
+  if (!isLoggedIn) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
 
   return (
-    <div className={`flex flex-col min-h-screen ${pageBg} font-sans text-text-primary`} dir="rtl">
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12 custom-scrollbar">
-          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </div>
+    <AppShell
+      groups={groups}
+      homeHref="/student-dashboard"
+      title="بوابة الطالب"
+      subtitle="مؤسسة مواهب"
+      section={{ label: "بوابة الطالب", to: "/student-dashboard" }}
+      roleLabel={formatRoleAr(user?.role)}
+    >
+      <Outlet />
+    </AppShell>
   );
 };
 

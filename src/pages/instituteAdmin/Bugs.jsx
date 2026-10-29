@@ -1,26 +1,30 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 import { Bug, ClipboardList, Clock, Loader, CheckCircle2, PenSquare, Send, Paperclip } from "lucide-react";
 import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/DataTable";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableStateRow } from "../../components/ui/DataTable";
 import StatGrid from "../../components/institute/StatGrid";
 import ThreadView from "../../components/institute/ThreadView";
 import { labelCls, textareaCls } from "../../components/institute/formStyles";
 import instituteApi from "../../services/api/instituteApi";
-import { threadStatusLabel } from "../../constants/institute";
+import { threadStatusLabel, THREAD_STATUS_TONE } from "../../constants/institute";
 
-const dt = (d) => (d ? new Date(d).toLocaleString("ar") : "—");
+import { formatDateTime } from "../../utils/format";
+import { StatusBadge } from "../../components/ui/Badge";
+import { EmptyState, Callout } from "../../components/ui/Feedback";
+import { useLoadEffect } from "../../hooks/useLoadEffect";
+const dt = (d) => formatDateTime(d);
 const STATUS_OPTIONS = [
-  { value: "pending", label: "⏳ بالانتظار" },
-  { value: "in_progress", label: "⚙️ قيد المتابعة" },
-  { value: "resolved", label: "✅ تم الحل" },
+  { value: "pending", label: "بالانتظار" },
+  { value: "in_progress", label: "قيد المتابعة" },
+  { value: "resolved", label: "تم الحل" },
 ];
 
 const Bugs = () => {
-  const [stats, setStats] = useState({});
+  const [formWarn, setFormWarn] = useState("");  const [loadError, setLoadError] = useState("");  const [stats, setStats] = useState({});
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(null);
   const [composing, setComposing] = useState(false);
@@ -28,7 +32,7 @@ const Bugs = () => {
   const [form, setForm] = useState({ subject: "", body: "", moduleTag: "" });
   const [files, setFiles] = useState([]);
 
-  const loadList = async () => {
+  const loadList = useCallback(async () => {
     try {
       const [st, list] = await Promise.all([
         instituteApi.getBugStats(),
@@ -36,28 +40,28 @@ const Bugs = () => {
       ]);
       setStats(st.data?.data || {});
       setRows(list.data?.data || []);
+      setLoadError("");
     } catch {
-      toast.error("تعذر تحميل البلاغات");
+      setLoadError("تعذّر تحميل البلاغات");
     }
-  };
-
-  useEffect(() => {
-    loadList();
   }, []);
+
+  useLoadEffect(loadList);
 
   const openThread = async (id) => {
     try {
       const res = await instituteApi.getBugThread(id);
       setOpen(res.data?.data || null);
     } catch {
-      toast.error("تعذر فتح البلاغ");
+      toast.error("تعذّر فتح البلاغ");
     }
   };
 
   const send = async (e) => {
     e.preventDefault();
+    setFormWarn("");
     if (!form.subject || !form.body) {
-      toast.warn("الموضوع والوصف مطلوبان");
+      setFormWarn("الموضوع والوصف مطلوبان");
       return;
     }
     setBusy(true);
@@ -72,7 +76,7 @@ const Bugs = () => {
       setComposing(false);
       loadList();
     } catch {
-      toast.error("تعذر تسجيل البلاغ");
+      setFormWarn("تعذّر تسجيل البلاغ. يُرجى المحاولة مرة أخرى.");
     } finally {
       setBusy(false);
     }
@@ -88,7 +92,7 @@ const Bugs = () => {
       await openThread(open.thread._id);
       loadList();
     } catch {
-      toast.error("تعذر إرسال الرد");
+      toast.error("تعذّر إرسال الرد");
     } finally {
       setBusy(false);
     }
@@ -101,7 +105,7 @@ const Bugs = () => {
       await openThread(open.thread._id);
       loadList();
     } catch {
-      toast.error("تعذر تحديث الحالة");
+      toast.error("تعذّر تحديث الحالة");
     } finally {
       setBusy(false);
     }
@@ -111,6 +115,11 @@ const Bugs = () => {
     return (
       <div className="space-y-6">
         <AdminPageHeader title="المشكلات والأخطاء" />
+        {loadError ? (
+          <Callout tone="danger" title={loadError} action={<Button variant="secondary" size="sm" onClick={() => loadList()}>إعادة المحاولة</Button>}>
+            يُرجى التحقق من الاتصال والمحاولة مرة أخرى.
+          </Callout>
+        ) : null}
         <ThreadView
           thread={open.thread}
           messages={open.messages}
@@ -146,29 +155,30 @@ const Bugs = () => {
       />
 
       {composing && (
-        <Card className="border-none shadow-sm">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Bug className="h-4 w-4 text-error-text" /> تسجيل بلاغ جديد
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={send} className="space-y-4">
+            <form onSubmit={send} noValidate className="space-y-4">
+              {formWarn ? <Callout tone="danger">{formWarn}</Callout> : null}
               <div>
-                <label className={labelCls}>موضوع البلاغ *</label>
-                <Input value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} />
+                <label htmlFor="bugsjsx-f1" className={labelCls}>موضوع البلاغ<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+                <Input id="bugsjsx-f1" value={form.subject} onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))} />
               </div>
               <div>
-                <label className={labelCls}>القسم / الوحدة (اختياري)</label>
-                <Input value={form.moduleTag} onChange={(e) => setForm((f) => ({ ...f, moduleTag: e.target.value }))} placeholder="مثال: السجل السلوكي" />
+                <label htmlFor="bugsjsx-f2" className={labelCls}>القسم / الوحدة (اختياري)</label>
+                <Input id="bugsjsx-f2" value={form.moduleTag} onChange={(e) => setForm((f) => ({ ...f, moduleTag: e.target.value }))} placeholder="مثال: السجل السلوكي" />
               </div>
               <div>
-                <label className={labelCls}>وصف المشكلة *</label>
-                <textarea className={textareaCls} rows={3} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
+                <label htmlFor="bugsjsx-f3" className={labelCls}>وصف المشكلة<span className="ms-0.5 text-danger-700" aria-hidden="true">*</span></label>
+                <textarea id="bugsjsx-f3" className={textareaCls} rows={3} value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} />
               </div>
               <div>
-                <label className={labelCls}>المرفقات (JPG/PNG/PDF ≤ 5MB)</label>
-                <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFiles(Array.from(e.target.files || []))} className="text-sm text-text-secondary" />
+                <label htmlFor="bugsjsx-f4" className={labelCls}>المرفقات (JPG/PNG/PDF ≤ 5MB)</label>
+                <input id="bugsjsx-f4" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFiles(Array.from(e.target.files || []))} className="text-sm text-text-secondary" />
               </div>
               <Button type="submit" disabled={busy}>
                 <Send className="h-4 w-4" /> إرسال البلاغ
@@ -178,11 +188,11 @@ const Bugs = () => {
         </Card>
       )}
 
-      <Card className="border-none shadow-sm">
+      <Card className="">
         <CardHeader>
-          <CardTitle className="text-base">قائمة البلاغات الواردة</CardTitle>
+          <CardTitle>قائمة البلاغات الواردة</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="px-0 pb-0 pt-0 sm:px-0 sm:pb-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -202,13 +212,13 @@ const Bugs = () => {
                   </TableCell>
                   <TableCell className="text-sm">{t.author?.name}</TableCell>
                   <TableCell className="text-sm">{dt(t.lastMessageAt)}</TableCell>
-                  <TableCell className="text-xs">{threadStatusLabel(t.status)}</TableCell>
+                  <TableCell className="text-xs"><StatusBadge tone={THREAD_STATUS_TONE[t.status]}>{threadStatusLabel(t.status)}</StatusBadge></TableCell>
                 </TableRow>
               ))}
               {!rows.length && (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-8 text-center text-text-secondary">لا توجد بلاغات.</TableCell>
-                </TableRow>
+                <TableStateRow colSpan={4}>
+                  <EmptyState compact kind="first-use" title="لا توجد بلاغات" />
+                </TableStateRow>
               )}
             </TableBody>
           </Table>

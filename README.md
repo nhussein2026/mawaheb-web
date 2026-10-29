@@ -21,7 +21,6 @@ Backend repo: [`mawaheb-api`](https://github.com/nhussein2026/Mawaheb-Backend) (
 | --- | --- |
 | `institiute-panel.md` | The original read-only capture of the legacy WordPress institute portal (`tm.mawaheb.org`) — 14 modules, every field, enum and screen. The functional source of truth. |
 | `INSTITUTE_PORTAL_PLAN.md` | The implementation & merge plan derived from that spec: role model, unified data model, phased rollout (A–F), and the open decisions list. |
-| `mawaheb-color-system.md` | The full design system — brand palette, surface hierarchy, text roles, component colour rules, typography, RTL guidance. |
 
 ---
 
@@ -54,8 +53,7 @@ Backend repo: [`mawaheb-api`](https://github.com/nhussein2026/Mawaheb-Backend) (
 | State | **Redux Toolkit 2** + `react-redux 9` | Two slices only: `auth`, `academicYear` |
 | HTTP | **axios 1** | Two clients — user session and guardian session |
 | Styling | **Tailwind CSS 4** via `@tailwindcss/vite` | Design tokens declared in `@theme` (see §10) |
-| Icons | `lucide-react`, `@heroicons/react`, `react-icons` | Three icon libraries in use |
-| Charts | `recharts 3` | Admin analytics |
+| Icons | `lucide-react` | One outline icon set |
 | Toasts | `react-toastify` | Single `<ToastContainer />` mounted in `App.jsx` |
 | Utilities | `clsx` + `tailwind-merge` → `src/utils/cn.js` | Standard `cn()` class merger |
 | Lint | ESLint 9 flat config | `eslint.config.js`; not wired into CI |
@@ -350,7 +348,7 @@ directly instead of going through `axiosClient`. New code should use the api mod
 
 ## 10. Design system
 
-Fully specified in `mawaheb-color-system.md`. Tokens are declared as Tailwind 4 `@theme`
+Tokens are declared as Tailwind 4 `@theme`
 custom properties in `src/styles/tailwind.css` and consumed as normal utility classes
 (`bg-surface-card`, `text-text-secondary`, `border-border-subtle`, …).
 
@@ -499,7 +497,7 @@ Factual observations of the code as it stands, for the next planning round.
 | 10 | **Duplicate component families** — `components/common/`, `components/ui/`, `components/layout/` and `components/institute/` each carry their own Button/Card/Sidebar/Header variants |
 | 11 | **A filename with a trailing space:** `pages/scholarshipStudentPages/StudentReportList .jsx` — imported with the space intact; fragile on case/space-sensitive tooling |
 | 12 | **Scratch routes shipped to production:** `/pro` and `/test` both render profile components; `/pro` and `/profile` render the same component |
-| 13 | Three icon libraries (`lucide-react`, `@heroicons/react`, `react-icons`) are bundled; institute/admin code uses lucide almost exclusively |
+| 13 | Resolved: only `lucide-react` remains; `@heroicons/react` and `react-icons` were removed |
 
 ### 14.4 Consistency & architecture
 

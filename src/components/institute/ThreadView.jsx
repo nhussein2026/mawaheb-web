@@ -1,108 +1,129 @@
 import React, { useState } from "react";
-import { ArrowRight, Send, Paperclip, User } from "lucide-react";
+import { ChevronRight, Send, Paperclip } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Button } from "../ui/Button";
-import { selectCls, labelCls, textareaCls } from "./formStyles";
-
-const dt = (d) => (d ? new Date(d).toLocaleString("ar") : "—");
+import { Field, Select, Textarea, Input } from "../ui/Input";
+import { Avatar } from "../ui/Avatar";
+import { Chip } from "../ui/Badge";
+import { formatDateTime, formatRelative } from "../../utils/format";
 
 const Attachments = ({ items = [] }) =>
   items.length ? (
-    <div className="mt-2 flex flex-wrap gap-2">
+    <ul className="mt-2 flex flex-wrap gap-2">
       {items.map((a, i) => (
-        <a
-          key={i}
-          href={a.url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 rounded bg-neutral-100 px-2 py-0.5 text-xs text-brand-600 hover:bg-neutral-200"
-        >
-          <Paperclip className="h-3 w-3" /> مرفق {i + 1}
-        </a>
+        <li key={i}>
+          <a
+            href={a.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-8 items-center gap-1.5 rounded-sm bg-subtle px-2.5 text-xs font-semibold text-brand-strong underline-offset-4 hover:underline"
+          >
+            <Paperclip className="size-4" aria-hidden="true" /> مرفق {i + 1}
+            <span className="sr-only">(يفتح في نافذة جديدة)</span>
+          </a>
+        </li>
       ))}
-    </div>
+    </ul>
   ) : null;
 
+// One message: who, when (relative under 7 days), and the text.
 const Bubble = ({ authorName, at, body, attachments }) => (
-  <div className="rounded-lg border-[0.5px] border-border-subtle p-3">
-    <div className="mb-1 flex items-center gap-2 text-xs text-text-muted">
-      <User className="h-3.5 w-3.5" />
-      <span className="font-medium text-text-secondary">{authorName || "—"}</span>
-      <span>· {dt(at)}</span>
+  <article className="flex gap-3 rounded-lg border border-border-default p-3 sm:p-4">
+    <Avatar name={authorName} size={32} />
+    <div className="min-w-0 flex-1">
+      <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
+        <span className="font-semibold text-text-primary">{authorName || "—"}</span>
+        <time dateTime={at} title={formatDateTime(at)} className="num text-xs text-text-tertiary">
+          {formatRelative(at)}
+        </time>
+      </p>
+      <p dir="auto" className="mt-1 whitespace-pre-wrap text-sm text-text-primary">
+        {body}
+      </p>
+      <Attachments items={attachments} />
     </div>
-    <p className="whitespace-pre-wrap text-sm text-text-primary">{body}</p>
-    <Attachments items={attachments} />
-  </div>
+  </article>
 );
 
-// Reusable thread detail (spec §5/§9): opener + replies log + reply box +
-// status control. `statusOptions` is [{value,label}]; omit to hide the control.
+// Reusable thread detail: opener + replies + reply box + status control.
+// `statusOptions` is [{value,label}]; omit to hide the control.
 const ThreadView = ({ thread, messages = [], statusOptions, onReply, onSetStatus, onBack, busy }) => {
   const [body, setBody] = useState("");
   const [files, setFiles] = useState([]);
+  const [error, setError] = useState("");
 
   const send = async (e) => {
     e.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim()) {
+      setError("يُرجى كتابة نص الرد");
+      document.getElementById("thread-reply")?.focus();
+      return;
+    }
+    setError("");
     await onReply(body, files);
     setBody("");
     setFiles([]);
-    // reset the native file input
     e.target.reset?.();
   };
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
-        <ArrowRight className="h-4 w-4" /> العودة للقائمة
-      </button>
+      <Button variant="tertiary" size="sm" onClick={onBack} className="-ms-2">
+        <ChevronRight aria-hidden="true" /> العودة إلى القائمة
+      </Button>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader className="flex-row items-center justify-between gap-3">
-          <CardTitle className="text-base">{thread.subject}</CardTitle>
-          {statusOptions && (
-            <select
-              className={`${selectCls} w-auto`}
-              value={thread.status}
-              onChange={(e) => onSetStatus(e.target.value)}
-              disabled={busy}
-            >
-              {statusOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          )}
+      <Card>
+        <CardHeader
+          actions={
+            statusOptions ? (
+              <Select
+                aria-label="حالة المحادثة"
+                className="w-auto"
+                value={thread.status}
+                onChange={(e) => onSetStatus(e.target.value)}
+                disabled={busy}
+              >
+                {statusOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            ) : null
+          }
+        >
+          <CardTitle dir="auto">{thread.subject}</CardTitle>
+          {thread.moduleTag ? <Chip className="mt-1">{thread.moduleTag}</Chip> : null}
         </CardHeader>
         <CardContent className="space-y-3">
-          {thread.moduleTag && (
-            <span className="inline-block rounded-full bg-accent-50 px-2 py-0.5 text-xs text-accent-700">
-              [{thread.moduleTag}]
-            </span>
-          )}
           <Bubble authorName={thread.author?.name} at={thread.createdAt} body={thread.body} attachments={thread.attachments} />
 
-          {messages.length > 0 && (
-            <>
-              <p className="pt-2 text-sm font-medium text-text-secondary">💬 سجل الردود والمناقشات السابقة</p>
+          {messages.length > 0 ? (
+            <section aria-label="الردود" className="space-y-3">
+              <h3 className="pt-2 text-heading-4 text-text-secondary">الردود</h3>
               {messages.map((m) => (
                 <Bubble key={m._id} authorName={m.author?.name} at={m.createdAt} body={m.body} attachments={m.attachments} />
               ))}
-            </>
-          )}
+            </section>
+          ) : null}
 
-          <form onSubmit={send} className="space-y-2 border-t-[0.5px] border-border-subtle pt-3">
-            <label className={labelCls}>الرد</label>
-            <textarea className={textareaCls} rows={2} value={body} onChange={(e) => setBody(e.target.value)} />
-            <div className="flex items-center justify-between gap-2">
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                className="text-xs text-text-secondary"
+          <form onSubmit={send} noValidate className="space-y-3 border-t border-border-subtle pt-4">
+            <Field label="الرد" error={error} id="thread-reply">
+              <Textarea
+                value={body}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  if (error && e.target.value.trim()) setError("");
+                }}
+                dir="auto"
               />
-              <Button type="submit" disabled={busy}>
-                <Send className="h-4 w-4" /> إرسال الرد
+            </Field>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <Field label="المرفقات" hint="PDF أو JPG أو PNG" id="thread-files" className="min-w-0 flex-1">
+                <Input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setFiles(Array.from(e.target.files || []))} />
+              </Field>
+              <Button type="submit" loading={busy}>
+                <Send className="icon-dir" aria-hidden="true" /> إرسال الرد
               </Button>
             </div>
           </form>

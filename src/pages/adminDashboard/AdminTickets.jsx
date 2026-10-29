@@ -1,238 +1,212 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { Card, CardContent } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { MessageSquare, Clock, PlusCircle, User, CheckCircle2, Trash2, Send } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Trash2 } from "lucide-react";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Button, IconButton } from "../../components/ui/Button";
+import { Field, Select, Textarea } from "../../components/ui/Input";
+import { StatusBadge } from "../../components/ui/Badge";
+import { Tabs } from "../../components/ui/Tabs";
+import { Avatar } from "../../components/ui/Avatar";
+import { EmptyState, SkeletonRows } from "../../components/ui/Feedback";
+import { useConfirm } from "../../components/ui/confirmContext";
+import { useResource } from "../../hooks/useResource";
+import { API_BASE_URL } from "../../services/api/config";
+import { TICKET_STATUS, ticketStatus } from "../../constants/tickets";
+import { formatRelative, formatDateTime } from "../../utils/format";
 
-function statusBadge(status) {
-  if (status === "Resolved") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-success-border bg-success-bg px-2.5 py-0.5 text-[11px] font-medium text-success-text">
-        تم الحل
-      </span>
-    );
-  }
-  if (status === "In Progress") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-warning-border bg-warning-bg px-2.5 py-0.5 text-[11px] font-medium text-warning-text">
-        قيد المعالجة
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full border border-border-default bg-neutral-100 px-2.5 py-0.5 text-[11px] font-medium text-text-muted">
-      مفتوحة
-    </span>
-  );
-}
+const SEGMENTS = ["all", "Open", "In Progress", "Resolved", "Closed"];
 
+// Support tickets from all users. Status segments live in the URL; each
+// ticket can be moved between statuses and answered in place.
 export default function AdminTickets() {
-  const navigate = useNavigate();
   const token = useSelector((state) => state.auth.token);
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const isAdmin = useSelector((state) => state.auth.user?.role === "Admin");
+  const confirm = useConfirm();
+  const [params, setParams] = useSearchParams();
+  const segment = SEGMENTS.includes(params.get("status")) ? params.get("status") : "all";
   const [replies, setReplies] = useState({});
-  const [isSaving, setIsSaving] = useState({});
+  const [saving, setSaving] = useState({});
 
-  const fetchTickets = async () => {
-    setLoading(true);
+  const { data: tickets, status, reload, setData } = useResource(
+    async () => {
+      const response = await fetch(`${API_BASE_URL}/tickets`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error(String(response.status));
+      return response.json();
+    },
+    [token],
+    { initial: [], select: (json) => (json?.success && Array.isArray(json.data) ? json.data : []) }
+  );
+
+  const counts = useMemo(() => {
+    const c = { all: tickets.length };
+    tickets.forEach((t) => {
+      const key = TICKET_STATUS[t.status] ? t.status : "Open";
+      c[key] = (c[key] || 0) + 1;
+    });
+    return c;
+  }, [tickets]);
+
+  const visible = segment === "all" ? tickets : tickets.filter((t) => (TICKET_STATUS[t.status] ? t.status : "Open") === segment);
+
+  const update = async (ticket, payload, isReply) => {
+    if (isReply) setSaving((s) => ({ ...s, [ticket._id]: true }));
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await response.json();
-      const fetchedTickets = json.success && Array.isArray(json.data) ? json.data : [];
-      setTickets(fetchedTickets);
-      
-      // Initialize replies state
-      const initialReplies = {};
-      fetchedTickets.forEach(t => {
-        initialReplies[t._id] = t.response || "";
-      });
-      setReplies(initialReplies);
-    } catch (e) {
-      console.error(e);
-      setTickets([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTickets();
-  }, [token]);
-
-  const handleUpdate = async (ticketId, payload, isReply = false) => {
-    if (isReply) setIsSaving(prev => ({ ...prev, [ticketId]: true }));
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets/${ticketId}`, {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticket._id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (data.success) {
-        toast.success(isReply ? "تم حفظ الرد بنجاح" : "تم تحديث التذكرة بنجاح");
-        if (!isReply) fetchTickets(); // Refresh for status updates
-      } else {
-        toast.error(data.message || "فشل التحديث");
-      }
-    } catch (e) {
-      toast.error("حدث خطأ أثناء التحديث");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message);
+      setData((list) => list.map((t) => (t._id === ticket._id ? { ...t, ...payload } : t)));
+      toast.success(isReply ? "تم حفظ الرد" : `أصبحت التذكرة «${ticketStatus(payload.status).label}»`);
+    } catch (err) {
+      toast.error(err.message || "تعذّر تحديث التذكرة. يُرجى المحاولة مرة أخرى.");
     } finally {
-      if (isReply) setIsSaving(prev => ({ ...prev, [ticketId]: false }));
+      if (isReply) setSaving((s) => ({ ...s, [ticket._id]: false }));
     }
   };
 
-  const handleDelete = async (ticketId) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذه التذكرة؟")) return;
+  const remove = async (ticket) => {
+    const ok = await confirm({
+      title: "حذف التذكرة؟",
+      body: `ستُحذف التذكرة «${ticket.title}» وردّها نهائيًا.`,
+      confirmLabel: "حذف التذكرة",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/tickets/${ticketId}`, {
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticket._id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await response.json();
-      if (data.success) {
-        toast.success("تم حذف التذكرة");
-        fetchTickets();
-      }
-    } catch (e) {
-      toast.error("فشل الحذف");
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error();
+      setData((list) => list.filter((t) => t._id !== ticket._id));
+      toast.success("تم حذف التذكرة");
+    } catch {
+      toast.error("تعذّر حذف التذكرة. يُرجى المحاولة مرة أخرى.");
     }
   };
 
   return (
-    <>
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="تذاكر الدعم"
-          description="عرض شامل لجميع تذاكر الطلاب عبر المسار الجديد `/tickets`."
-          actions={
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className="rounded-md"
-              onClick={() => navigate("/create-ticket")}
-            >
-              <PlusCircle className="ms-1.5 h-4 w-4" />
-              تذكرة جديدة
-            </Button>
-          }
+    <div className="space-y-6">
+      <PageHeader
+        title="تذاكر الدعم"
+        description="أسئلة الطلاب ومشكلاتهم وردود الإدارة عليها."
+        actions={
+          <Link
+            to="/create-ticket"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border-control bg-surface px-4 text-sm font-semibold text-text-primary hover:bg-subtle"
+          >
+            فتح تذكرة
+          </Link>
+        }
+      />
+
+      <Card>
+        <Tabs
+          label="حالة التذاكر"
+          className="px-2 sm:px-4"
+          value={segment}
+          onChange={(v) => setParams(v === "all" ? {} : { status: v }, { replace: true })}
+          items={SEGMENTS.map((s) => ({
+            value: s,
+            label: s === "all" ? "الكل" : TICKET_STATUS[s].label,
+            count: status === "ready" ? counts[s] || 0 : undefined,
+          }))}
         />
-
-        {loading ? (
-          <p className="text-sm text-text-secondary">جاري التحميل…</p>
-        ) : tickets.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-              <MessageSquare className="h-12 w-12 text-neutral-300" />
-              <p className="text-sm text-text-secondary">لا توجد تذاكر للعرض.</p>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="rounded-md"
-                onClick={() => navigate("/ticket-list")}
-              >
-                صفحة التذاكر
-              </Button>
-            </CardContent>
-          </Card>
+        {status === "loading" ? (
+          <SkeletonRows rows={5} />
+        ) : status === "failed" ? (
+          <EmptyState kind="failed" title="تعذّر تحميل التذاكر" onRetry={reload} />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            kind={segment === "all" ? "first-use" : "all-done"}
+            title={segment === "all" ? "لا توجد تذاكر بعد" : `لا توجد تذاكر «${TICKET_STATUS[segment].label}»`}
+          />
         ) : (
-          <div className="space-y-3">
-            {tickets.map((ticket) => (
-              <Card key={ticket._id} className="overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-medium text-text-primary">{ticket.title}</h3>
-                        {statusBadge(ticket.status)}
-                      </div>
-                      {ticket.description ? (
-                        <p className="text-sm text-text-secondary">{ticket.description}</p>
-                      ) : null}
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-text-muted pt-1">
-                        <p className="flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5" />
-                          {ticket.userId?.name || "مستخدم"}
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5" />
-                          {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString("en-US") : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <select
-                        className="h-8 rounded-md border border-border-default bg-surface-page px-2 text-xs font-medium text-text-primary outline-none focus:ring-2 focus:ring-brand-600"
-                        value={ticket.status}
-                        onChange={(e) => handleUpdate(ticket._id, { status: e.target.value })}
-                      >
-                        <option value="Open">مفتوحة</option>
-                        <option value="In Progress">قيد المعالجة</option>
-                        <option value="Resolved">تم الحل</option>
-                        <option value="Closed">مغلقة</option>
-                      </select>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-md text-error-text hover:bg-error-bg"
-                        onClick={() => handleDelete(ticket._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border-subtle bg-neutral-50/50 p-5">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-text-muted">
-                        <MessageSquare className="h-3 w-3" />
-                        الرد الإداري
-                      </div>
-                      <div className="relative space-y-3">
-                        <textarea
-                          className="w-full rounded-lg border border-border-default bg-surface-page p-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-brand-600 min-h-[100px] transition-all"
-                          placeholder="اكتب ردك الإداري هنا لتوضيح الإجراء المتخذ..."
-                          value={replies[ticket._id] || ""}
-                          onChange={(e) => setReplies(prev => ({ ...prev, [ticket._id]: e.target.value }))}
-                        />
-                        <div className="flex justify-end">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            className="rounded-md h-9 px-4"
-                            onClick={() => handleUpdate(ticket._id, { response: replies[ticket._id] }, true)}
-                            disabled={isSaving[ticket._id] || replies[ticket._id] === (ticket.response || "")}
-                          >
-                            {isSaving[ticket._id] ? (
-                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                            ) : (
-                              <>
-                                <Send className="ms-1.5 h-3.5 w-3.5" />
-                                حفظ الرد
-                              </>
-                            )}
-                          </Button>
+          <ul className="divide-y divide-border-subtle">
+            {visible.map((ticket) => {
+              const st = ticketStatus(ticket.status);
+              const reply = replies[ticket._id] ?? ticket.response ?? "";
+              const changed = reply !== (ticket.response || "");
+              return (
+                <li key={ticket._id} className="px-4 py-5 sm:px-6">
+                  <article className="space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <Avatar name={ticket.userId?.name} size={40} />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 dir="auto" className="text-heading-4 text-text-primary">
+                              {ticket.title}
+                            </h2>
+                            <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
+                          </div>
+                          <p className="text-xs text-text-tertiary">
+                            <bdi>{ticket.userId?.name || "مستخدم"}</bdi> ·{" "}
+                            <time className="num" dateTime={ticket.createdAt} title={formatDateTime(ticket.createdAt)}>
+                              {formatRelative(ticket.createdAt)}
+                            </time>
+                          </p>
                         </div>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <Select
+                          aria-label={`حالة التذكرة ${ticket.title}`}
+                          className="h-8 w-auto text-sm"
+                          value={TICKET_STATUS[ticket.status] ? ticket.status : "Open"}
+                          onChange={(e) => update(ticket, { status: e.target.value })}
+                        >
+                          {Object.entries(TICKET_STATUS).map(([value, s]) => (
+                            <option key={value} value={value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </Select>
+                        {isAdmin ? (
+                          <IconButton label={`حذف التذكرة ${ticket.title}`} size="sm" tone="danger" onClick={() => remove(ticket)}>
+                            <Trash2 />
+                          </IconButton>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    {ticket.description ? (
+                      <p dir="auto" className="reading whitespace-pre-wrap text-sm text-text-secondary">
+                        {ticket.description}
+                      </p>
+                    ) : null}
+                    <form
+                      className="space-y-2 rounded-lg bg-subtle p-3 sm:p-4"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        update(ticket, { response: reply }, true);
+                      }}
+                    >
+                      <Field label="رد الإدارة" hint="يظهر للطالب في صفحة تذاكره" id={`reply-${ticket._id}`}>
+                        <Textarea
+                          value={reply}
+                          onChange={(e) => setReplies((r) => ({ ...r, [ticket._id]: e.target.value }))}
+                          dir="auto"
+                        />
+                      </Field>
+                      <div className="flex justify-end">
+                        <Button type="submit" size="sm" loading={saving[ticket._id]} disabled={!changed} aria-disabled={!changed || undefined}>
+                          حفظ الرد
+                        </Button>
+                      </div>
+                    </form>
+                  </article>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </div>
-    </>
+      </Card>
+    </div>
   );
 }

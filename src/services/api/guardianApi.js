@@ -1,9 +1,10 @@
 import axios from "axios";
+import { API_BASE_URL } from "./config";
 
 // Guardian portal API (spec §6.15). Uses a SEPARATE axios instance and its own
 // short-lived, read-only token (localStorage `guardianToken`) so it never
 // mixes with the normal user session token.
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const BASE_URL = API_BASE_URL;
 
 export const GUARDIAN_TOKEN_KEY = "guardianToken";
 export const GUARDIAN_STUDENT_KEY = "guardianStudent";

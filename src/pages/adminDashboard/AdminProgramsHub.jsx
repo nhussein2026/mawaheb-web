@@ -1,133 +1,62 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { StatTile, StatTiles } from "../../components/ui/StatTile";
+import { SkeletonTiles } from "../../components/ui/Feedback";
+import { useResource } from "../../hooks/useResource";
+import { API_BASE_URL } from "../../services/api/config";
 
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
-import { BookOpen, Calendar, Award, StickyNote, AlertTriangle, ArrowUpLeft } from "lucide-react";
-
-async function fetchCount(url, token) {
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return Array.isArray(data) ? data.length : null;
-  } catch {
-    return null;
-  }
-}
-
-const hubs = [
-  {
-    title: "الدورات",
-    description: "إدارة مسارات التعلّم",
-    href: "/student/courses",
-    icon: BookOpen,
-    key: "courses",
-  },
-  {
-    title: "الفعاليات",
-    description: "ورش وأنشطة",
-    href: "/student/events",
-    icon: Calendar,
-    key: "events",
-  },
-  {
-    title: "الشهادات",
-    description: "مكتبة الشهادات",
-    href: "/student/certificates",
-    icon: Award,
-    key: "certificates",
-  },
-  {
-    title: "الملاحظات",
-    description: "مدخلات قاعدة المعرفة",
-    href: "/notes",
-    icon: StickyNote,
-    key: "notes",
-  },
-  {
-    title: "الصعوبات",
-    description: "تصنيف التحديات",
-    href: "/student/difficulties",
-    icon: AlertTriangle,
-    key: "difficulties",
-  },
+const HUBS = [
+  { key: "courses", title: "الدورات", path: "/courses", href: "/student/courses" },
+  { key: "events", title: "الفعاليات", path: "/events", href: "/student/events" },
+  { key: "certificates", title: "الشهادات", path: "/certificates", href: "/student/certificates" },
+  { key: "notes", title: "الملاحظات", path: "/notes", href: "/notes" },
+  { key: "difficulties", title: "الصعوبات", path: "/difficulties", href: "/student/difficulties" },
 ];
 
+// Record counts per content type; each tile opens the screen that manages it.
+// A count that could not be loaded shows "—" with a note, never a zero.
 export default function AdminProgramsHub() {
   const token = useSelector((state) => state.auth.token);
-  const [counts, setCounts] = useState({});
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const base = import.meta.env.VITE_API_URL;
-    const load = async () => {
-      setLoading(true);
-      const [courses, events, certificates, notes, difficulties] = await Promise.all([
-        fetchCount(`${base}/courses`, token),
-        fetchCount(`${base}/events`, token),
-        fetchCount(`${base}/certificates`, token),
-        fetchCount(`${base}/notes`, token),
-        fetchCount(`${base}/difficulties`, token),
-      ]);
-      setCounts({
-        courses,
-        events,
-        certificates,
-        notes,
-        difficulties,
-      });
-      setLoading(false);
-    };
-    load();
-  }, [token]);
+  const { data: counts, status } = useResource(
+    async () => {
+      const results = await Promise.all(
+        HUBS.map(async (h) => {
+          try {
+            const res = await fetch(`${API_BASE_URL}${h.path}`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) return [h.key, null];
+            const data = await res.json();
+            return [h.key, Array.isArray(data) ? data.length : null];
+          } catch {
+            return [h.key, null];
+          }
+        })
+      );
+      return Object.fromEntries(results);
+    },
+    [token],
+    { initial: {}, select: (d) => d }
+  );
 
   return (
-    <>
-      <div className="space-y-6">
-        <AdminPageHeader
-          title="البرامج والمحتوى"
-          description="أعداد مسجّلة من نفس مسارات القوائم المستخدمة في التطبيق. استخدم الروابط للإنشاء والتعديل الكامل."
-        />
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {hubs.map((hub) => {
-            const Icon = hub.icon;
-            const n = counts[hub.key];
-            return (
-              <Card key={hub.key}>
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-brand-600" />
-                      {hub.title}
-                    </CardTitle>
-                    <CardDescription>{hub.description}</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-text-muted">السجلات</p>
-                    <p className="text-2xl font-medium text-text-primary">
-                      {loading ? "…" : n === null ? "—" : n}
-                    </p>
-                  </div>
-                  <Link
-                    to={hub.href}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-text-brand hover:underline"
-                  >
-                    إدارة
-                    <ArrowUpLeft className="h-3.5 w-3.5" />
-                  </Link>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-    </>
+    <div className="space-y-6">
+      <PageHeader title="البرامج والمحتوى" description="عدد السجلات في كل نوع من المحتوى. افتح أي بطاقة لإدارته." />
+      {status === "loading" ? (
+        <SkeletonTiles count={5} />
+      ) : (
+        <StatTiles cols={5}>
+          {HUBS.map((h) => (
+            <StatTile
+              key={h.key}
+              label={h.title}
+              value={counts[h.key] == null ? "—" : counts[h.key]}
+              hint={counts[h.key] == null ? "تعذّر التحميل" : "سجل"}
+              to={h.href}
+            />
+          ))}
+        </StatTiles>
+      )}
+    </div>
   );
 }

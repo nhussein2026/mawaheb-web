@@ -1,627 +1,227 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { AdminPageHeader } from "../../components/admin/AdminPageHeader";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "../../components/ui/Card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-} from "recharts";
-import {
-  BookOpen,
-  Award,
-  FileText,
-  AlertTriangle,
-  Calendar,
-  Wallet,
-  Ticket,
-  Star,
-  TrendingUp,
-  BarChart3,
-} from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
+import { StatTile, StatTiles } from "../../components/ui/StatTile";
+import { BarList } from "../../components/ui/BarList";
+import { Tabs } from "../../components/ui/Tabs";
+import { PersonCell } from "../../components/ui/PersonCell";
+import { EmptyState, SkeletonCard, SkeletonTiles } from "../../components/ui/Feedback";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableStateRow } from "../../components/ui/DataTable";
+import { useResource } from "../../hooks/useResource";
+import { API_BASE_URL } from "../../services/api/config";
+import { formatNumber } from "../../utils/format";
 
-// ─── Category Config ────────────────────────────────────────────────────────
 const CATEGORIES = [
-  {
-    key: "courses",
-    label: "الدورات",
-    countField: "courseCount",
-    color: "var(--color-brand-600)",
-    bg: "var(--color-brand-50)",
-    icon: BookOpen,
-  },
-  {
-    key: "certificates",
-    label: "الشهادات",
-    countField: "certificateCount",
-    color: "var(--color-award-text)",
-    bg: "var(--color-award-bg)",
-    icon: Award,
-  },
-  {
-    key: "reports",
-    label: "التقارير",
-    countField: "reportCount",
-    color: "var(--color-brand-400)",
-    bg: "var(--color-brand-50)",
-    icon: FileText,
-  },
-  {
-    key: "difficulties",
-    label: "الصعوبات",
-    countField: "difficultyCount",
-    color: "var(--color-error-text)",
-    bg: "var(--color-error-bg)",
-    icon: AlertTriangle,
-  },
-  {
-    key: "events",
-    label: "الفعاليات",
-    countField: "eventCount",
-    color: "var(--color-accent-400)",
-    bg: "var(--color-accent-50)",
-    icon: Calendar,
-  },
-  {
-    key: "financialReports",
-    label: "التقارير المالية",
-    countField: "financialReportCount",
-    color: "var(--color-success-text)",
-    bg: "var(--color-success-bg)",
-    icon: Wallet,
-  },
-  {
-    key: "tickets",
-    label: "التذاكر",
-    countField: "ticketCount",
-    color: "var(--color-warning-text)",
-    bg: "var(--color-warning-bg)",
-    icon: Ticket,
-  },
-  {
-    key: "userAchievements",
-    label: "الإنجازات",
-    countField: "achievementCount",
-    color: "var(--color-accent-600)",
-    bg: "var(--color-accent-50)",
-    icon: Star,
-  },
+  { key: "courses", label: "الدورات", countField: "courseCount" },
+  { key: "certificates", label: "الشهادات", countField: "certificateCount" },
+  { key: "reports", label: "التقارير", countField: "reportCount" },
+  { key: "difficulties", label: "الصعوبات", countField: "difficultyCount" },
+  { key: "events", label: "الفعاليات", countField: "eventCount" },
+  { key: "financialReports", label: "التقارير المالية", countField: "financialReportCount" },
+  { key: "tickets", label: "التذاكر", countField: "ticketCount" },
+  { key: "userAchievements", label: "الإنجازات", countField: "achievementCount" },
 ];
 
-// ─── Tooltip Styles ──────────────────────────────────────────────────────────
-const tooltipStyles = {
-  borderRadius: "var(--radius-md)",
-  border: "0.5px solid var(--border-subtle)",
-  background: "var(--surface-card)",
-  direction: "rtl",
-  fontSize: "12px",
-  color: "var(--text-primary)",
-};
+const formatAvg = new Intl.NumberFormat("ar-YE-u-nu-latn", { maximumFractionDigits: 1 });
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
-const Skeleton = ({ className = "" }) => (
-  <div
-    className={`animate-pulse rounded bg-[var(--color-neutral-200)] ${className}`}
-  />
-);
-
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-const StatCard = ({ label, count, icon: Icon, color, bg, loading, rank }) => (
-  <div
-    className="relative overflow-hidden rounded-2xl border p-5 transition-all hover:shadow-md"
-    style={{
-      borderColor: "var(--border-subtle)",
-      background: "var(--surface-card)",
-    }}
-  >
-    {/* rank badge */}
-    {rank === 1 && (
-      <div className="absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-accent-50)] text-[10px] font-bold text-[var(--color-accent-600)] border border-[var(--color-accent-200)]">
-        #1
-      </div>
-    )}
-    <div className="flex items-start justify-between gap-3" dir="rtl">
-      <div className="flex flex-col gap-1">
-        <span
-          className="text-[11px] font-medium uppercase tracking-[0.07em]"
-          style={{ color: "var(--text-muted)" }}
-        >
-          {label}
-        </span>
-        {loading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <span className="text-2xl font-black tabular-nums text-[var(--text-primary)]">
-            {count.toLocaleString("en-US")}
-          </span>
-        )}
-      </div>
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: bg, color: color }}
-      >
-        <Icon size={20} />
-      </div>
-    </div>
-  </div>
-);
-
-// ─── Top Users Table ──────────────────────────────────────────────────────────
-const TopUsersTable = ({ users, countField, color, bg, loading }) => {
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
-        ))}
-      </div>
-    );
-  }
-  if (!users || users.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-text-secondary">
-        لا توجد بيانات
-      </p>
-    );
-  }
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm" dir="rtl">
-        <thead>
-          <tr className="border-b border-[var(--border-subtle)] text-right text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--text-muted)]">
-            <th className="pb-3 pr-2">#</th>
-            <th className="pb-3">الاسم</th>
-            <th className="pb-3">البريد</th>
-            <th className="pb-3 text-left">العدد</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.slice(0, 5).map((u, i) => (
-            <tr
-              key={u._id}
-              className="border-b border-dashed border-[var(--border-subtle)] last:border-0 hover:bg-[var(--color-brand-50)] transition-colors"
-            >
-              <td className="py-3 pr-2 text-[var(--text-secondary)]">{i + 1}</td>
-              <td className="py-3 font-medium text-[var(--text-primary)]">
-                {u.name || "—"}
-              </td>
-              <td className="py-3 text-[var(--text-secondary)]">{u.email || "—"}</td>
-              <td className="py-3 text-left">
-                <span
-                  className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{ background: bg, color: color }}
-                >
-                  {(u[countField] || 0).toLocaleString("en-US")}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-// ─── Main Analytics Page ──────────────────────────────────────────────────────
+// Engagement across content types: an overview of totals, and per-category
+// detail with the most active users. The view and category live in the URL.
 export default function Analytics() {
   const token = useSelector((state) => state.auth.token);
+  const [params, setParams] = useSearchParams();
+  const view = params.get("view") === "detail" ? "detail" : "overview";
+  const activeKey = CATEGORIES.some((c) => c.key === params.get("category")) ? params.get("category") : CATEGORIES[0].key;
+  const activeCat = CATEGORIES.find((c) => c.key === activeKey);
 
-  const [categoryData, setCategoryData] = useState({}); // { [key]: { total, users } }
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].key);
-  const [activeTab, setActiveTab] = useState("overview"); // overview | detail
-
-  // ── Fetch all categories in parallel ────────────────────────────────────
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const results = await Promise.all(
+  // Each category loads on its own; a failed one shows "—" instead of zero.
+  const { data, status, reload } = useResource(
+    async () => {
+      const entries = await Promise.all(
         CATEGORIES.map(async (cat) => {
-          const res = await fetch(
-            `${import.meta.env.VITE_API_URL}/user/summary?category=${cat.key}&limit=100`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (!res.ok) throw new Error(`فشل تحميل: ${cat.label}`);
-          const json = await res.json();
-          const users = json.result ?? [];
-          const total = users.reduce(
-            (acc, u) => acc + (u[cat.countField] || 0),
-            0
-          );
-          return { key: cat.key, total, users };
+          try {
+            const res = await fetch(`${API_BASE_URL}/user/summary?category=${cat.key}&limit=100`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) return [cat.key, null];
+            const json = await res.json();
+            const users = json.result ?? [];
+            return [cat.key, { users, total: users.reduce((acc, u) => acc + (u[cat.countField] || 0), 0) }];
+          } catch {
+            return [cat.key, null];
+          }
         })
       );
-
-      const map = {};
-      results.forEach(({ key, total, users }) => {
-        map[key] = { total, users };
-      });
-      setCategoryData(map);
-    } catch (err) {
-      console.error("[Analytics]", err.message);
-      setError("تعذّر تحميل بعض البيانات. تحقق من الاتصال بالخادم.");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  // ── Derived data ─────────────────────────────────────────────────────────
-  const barData = CATEGORIES.map((cat) => ({
-    name: cat.label,
-    العدد: categoryData[cat.key]?.total ?? 0,
-    fill: cat.color,
-  }));
-
-  const radarData = CATEGORIES.map((cat) => ({
-    subject: cat.label,
-    A: categoryData[cat.key]?.total ?? 0,
-  }));
-
-  const activeCat = CATEGORIES.find((c) => c.key === activeCategory);
-  const activeUsers = categoryData[activeCategory]?.users ?? [];
-  const sortedUsers = [...activeUsers].sort(
-    (a, b) => (b[activeCat?.countField] || 0) - (a[activeCat?.countField] || 0)
+      const map = Object.fromEntries(entries);
+      if (Object.values(map).every((v) => v === null)) throw new Error("all failed");
+      return map;
+    },
+    [token],
+    { initial: {}, select: (d) => d }
   );
 
-  // sorted stat cards by total desc
-  const sortedCards = [...CATEGORIES].sort(
-    (a, b) =>
-      (categoryData[b.key]?.total ?? 0) - (categoryData[a.key]?.total ?? 0)
+  const failedCount = CATEGORIES.filter((c) => data[c.key] === null).length;
+  const grandTotal = CATEGORIES.reduce((acc, c) => acc + (data[c.key]?.total ?? 0), 0);
+  const overviewRows = useMemo(
+    () =>
+      CATEGORIES.filter((c) => data[c.key])
+        .map((c) => ({ label: c.label, value: data[c.key].total }))
+        .sort((a, b) => b.value - a.value),
+    [data]
   );
 
-  const grandTotal = CATEGORIES.reduce(
-    (acc, cat) => acc + (categoryData[cat.key]?.total ?? 0),
-    0
+  const activeUsers = useMemo(
+    () => [...(data[activeKey]?.users ?? [])].sort((a, b) => (b[activeCat.countField] || 0) - (a[activeCat.countField] || 0)),
+    [data, activeKey, activeCat]
   );
+  const activeTotal = data[activeKey]?.total ?? 0;
 
-  // ── Tabs ─────────────────────────────────────────────────────────────────
-  const tabs = [
-    { key: "overview", label: "نظرة عامة" },
-    { key: "detail", label: "تفصيل حسب الفئة" },
-  ];
+  const setView = (v) => setParams(v === "overview" ? {} : { view: v, category: activeKey }, { replace: true });
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <AdminPageHeader
-        title="التحليلات"
-        description="تحليل شامل لتفاعل المستخدمين عبر جميع الفئات"
+    <div className="space-y-6">
+      <PageHeader title="التحليلات" description="تفاعل المستخدمين مع أنواع المحتوى في المنصة." />
+
+      <Tabs
+        label="عرض التحليلات"
+        value={view}
+        onChange={setView}
+        items={[
+          { value: "overview", label: "نظرة عامة" },
+          { value: "detail", label: "تفصيل حسب الفئة" },
+        ]}
       />
 
-      {/* Error Banner */}
-      {error && (
-        <div className="rounded-md border-e-[3px] border-e-[var(--color-error-border)] bg-[var(--color-error-bg)] px-4 py-3 text-sm text-[var(--color-error-text)]">
-          {error}
-          <button
-            onClick={fetchAll}
-            className="mr-3 underline underline-offset-2"
-          >
-            إعادة المحاولة
-          </button>
-        </div>
-      )}
-
-      {/* Grand Total Banner */}
-      <div className="flex items-center justify-between rounded-2xl border border-[var(--color-brand-100)] bg-gradient-to-l from-[var(--color-brand-50)] to-transparent px-6 py-5 shadow-sm">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--color-brand-600)]">
-            إجمالي التفاعلات عبر المنصة
-          </p>
-          {loading ? (
-            <Skeleton className="mt-1 h-9 w-32" />
-          ) : (
-            <p className="text-4xl font-black tabular-nums text-[var(--color-brand-800)]">
-              {grandTotal.toLocaleString("en-US")}
-            </p>
-          )}
-        </div>
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-brand-100)] text-[var(--color-brand-600)]">
-          <BarChart3 size={32} />
-        </div>
-      </div>
-
-      {/* Tab Switcher */}
-      <div className="flex gap-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-all ${activeTab === t.key
-                ? "bg-[var(--color-brand-600)] text-[var(--text-inverse)] shadow-sm"
-                : "text-[var(--text-secondary)] hover:bg-[var(--color-brand-50)]"
-              }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ══ OVERVIEW TAB ══════════════════════════════════════════════════ */}
-      {activeTab === "overview" && (
+      {status === "loading" ? (
         <div className="space-y-6">
-          {/* Stat Cards Grid */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {sortedCards.map((cat, i) => (
-              <StatCard
-                key={cat.key}
-                label={cat.label}
-                icon={cat.icon}
-                color={cat.color}
-                bg={cat.bg}
-                count={categoryData[cat.key]?.total ?? 0}
-                loading={loading}
-                rank={i + 1}
-              />
-            ))}
-          </div>
-
-          {/* Bar Chart — Totals */}
-          <Card>
-            <CardHeader>
-              <CardTitle>مقارنة الإجماليات</CardTitle>
-              <CardDescription>
-                مجموع التفاعلات لكل فئة عبر جميع المستخدمين
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[320px]">
-              {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-                  جاري التحميل…
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={barData}
-                    margin={{ top: 16, right: 8, left: 0, bottom: 8 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="var(--color-border-subtle)"
-                    />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip contentStyle={tooltipStyles} />
-                    <Bar
-                      dataKey="العدد"
-                      radius={[6, 6, 0, 0]}
-                      isAnimationActive
-                    >
-                      {barData.map((entry, index) => (
-                        <rect key={index} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Radar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>مخطط الرادار</CardTitle>
-              <CardDescription>
-                توزيع التفاعلات النسبي بين جميع الفئات
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[320px]">
-              {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-                  جاري التحميل…
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart data={radarData}>
-                    <PolarGrid stroke="var(--color-border-subtle)" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                    />
-                    <PolarRadiusAxis tick={false} axisLine={false} />
-                    <Radar
-                      name="الإجمالي"
-                      dataKey="A"
-                      stroke="var(--color-brand-600)"
-                      fill="var(--color-brand-600)"
-                      fillOpacity={0.2}
-                    />
-                    <Tooltip contentStyle={tooltipStyles} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+          <SkeletonTiles />
+          <SkeletonCard lines={8} />
         </div>
-      )}
-
-      {/* ══ DETAIL TAB ════════════════════════════════════════════════════ */}
-      {activeTab === "detail" && (
-        <div className="space-y-5">
-          {/* Category Selector */}
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setActiveCategory(cat.key)}
-                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition-all ${activeCategory === cat.key
-                    ? "border-transparent text-[var(--text-inverse)] shadow-sm"
-                    : "border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--color-brand-400)]"
-                  }`}
-                style={
-                  activeCategory === cat.key
-                    ? { background: cat.color }
-                    : { "--hover-color": cat.color }
-                }
-              >
-                <cat.icon size={14} />
-                {cat.label}
-                <span
-                  className="rounded-full px-2 py-0.5 text-[10px]"
-                  style={{
-                    background:
-                      activeCategory === cat.key ? "rgba(255,255,255,0.2)" : cat.bg,
-                  }}
-                >
-                  {(categoryData[cat.key]?.total ?? 0).toLocaleString("en-US")}
-                </span>
+      ) : status === "failed" ? (
+        <Card>
+          <EmptyState kind="failed" title="تعذّر تحميل التحليلات" onRetry={reload} />
+        </Card>
+      ) : view === "overview" ? (
+        <div className="space-y-6">
+          {failedCount ? (
+            <p role="status" className="text-sm text-warning-700">
+              تعذّر تحميل {formatNumber(failedCount)} من الفئات، فلم تُحتسب في الإجمالي.{" "}
+              <button type="button" onClick={reload} className="font-semibold underline underline-offset-4">
+                إعادة المحاولة
               </button>
-            ))}
-          </div>
-
-          {/* Detail Cards Row */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              {
-                label: "إجمالي التفاعلات",
-                value: (categoryData[activeCategory]?.total ?? 0).toLocaleString("en-US"),
-              },
-              {
-                label: "المستخدمون النشطون",
-                value: activeUsers.length.toLocaleString("en-US"),
-              },
-              {
-                label: "المتوسط / مستخدم",
-                value: activeUsers.length
-                  ? (
-                    (categoryData[activeCategory]?.total ?? 0) /
-                    activeUsers.length
-                  ).toFixed(1)
-                  : "0",
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 text-center"
-              >
-                <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-[var(--text-muted)]">{item.label}</p>
-                {loading ? (
-                  <Skeleton className="mx-auto mt-1 h-7 w-16" />
-                ) : (
-                  <p
-                    className="text-2xl font-black tabular-nums"
-                    style={{ color: activeCat?.color }}
-                  >
-                    {item.value}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Top Users Bar Chart */}
+            </p>
+          ) : null}
+          <StatTiles>
+            <StatTile label="إجمالي السجلات" value={grandTotal} hint="في جميع الفئات" />
+            {overviewRows.slice(0, 3).map((r) => {
+              const cat = CATEGORIES.find((c) => c.label === r.label);
+              return (
+                <StatTile
+                  key={r.label}
+                  label={r.label}
+                  value={r.value}
+                  to={`?view=detail&category=${cat.key}`}
+                />
+              );
+            })}
+          </StatTiles>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <activeCat.icon size={20} className="text-[var(--color-brand-600)]" />
-                أعلى المستخدمين — {activeCat?.label}
+              <CardTitle>
+                {overviewRows[0]?.value ? `${overviewRows[0].label} الأكثر تسجيلًا` : "السجلات حسب الفئة"}
               </CardTitle>
-              <CardDescription>
-                المستخدمون الخمسة الأوائل حسب العدد
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="h-[280px]">
-              {loading ? (
-                <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-                  جاري التحميل…
-                </div>
-              ) : sortedUsers.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-                  لا توجد بيانات
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={sortedUsers.slice(0, 5).map((u) => ({
-                      name: u.name || u.email || "مستخدم",
-                      العدد: u[activeCat?.countField] || 0,
-                    }))}
-                    layout="vertical"
-                    margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      horizontal={false}
-                      stroke="var(--color-border-subtle)"
-                    />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={80}
-                    />
-                    <Tooltip contentStyle={tooltipStyles} />
-                    <Bar
-                      dataKey="العدد"
-                      fill={activeCat?.color}
-                      radius={[0, 6, 6, 0]}
-                      isAnimationActive
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Full Users Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <activeCat.icon size={20} className="text-[var(--color-brand-600)]" />
-                جدول المستخدمين — {activeCat?.label}
-              </CardTitle>
-              <CardDescription>
-                جميع المستخدمين مرتبين تنازلياً
-              </CardDescription>
+              <CardDescription>عدد السجلات في كل فئة لجميع المستخدمين</CardDescription>
             </CardHeader>
             <CardContent>
-              <TopUsersTable
-                users={sortedUsers}
-                countField={activeCat?.countField}
-                color={activeCat?.color}
-                bg={activeCat?.bg}
-                loading={loading}
+              <BarList
+                label="السجلات حسب الفئة"
+                rows={overviewRows.map((r) => ({
+                  ...r,
+                  to: `?view=detail&category=${CATEGORIES.find((c) => c.label === r.label).key}`,
+                }))}
               />
             </CardContent>
           </Card>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <Tabs
+            label="الفئة"
+            value={activeKey}
+            onChange={(k) => setParams({ view: "detail", category: k }, { replace: true })}
+            items={CATEGORIES.map((c) => ({ value: c.key, label: c.label }))}
+          />
+          {data[activeKey] === null ? (
+            <Card>
+              <EmptyState kind="failed" title={`تعذّر تحميل بيانات ${activeCat.label}`} onRetry={reload} />
+            </Card>
+          ) : (
+            <>
+              <StatTiles cols={3}>
+                <StatTile label={`إجمالي ${activeCat.label}`} value={activeTotal} />
+                <StatTile label="المستخدمون المشاركون" value={activeUsers.length} />
+                <StatTile
+                  label="المتوسط لكل مستخدم"
+                  value={activeUsers.length ? formatAvg.format(activeTotal / activeUsers.length) : 0}
+                />
+              </StatTiles>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>الأكثر نشاطًا في {activeCat.label}</CardTitle>
+                  <CardDescription>أعلى خمسة مستخدمين حسب العدد</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {activeUsers.length ? (
+                    <BarList
+                      label={`الأكثر نشاطًا في ${activeCat.label}`}
+                      rows={activeUsers.slice(0, 5).map((u) => ({ label: u.name || u.email || "مستخدم", value: u[activeCat.countField] || 0 }))}
+                    />
+                  ) : (
+                    <EmptyState kind="first-use" compact title="لا توجد بيانات في هذه الفئة" />
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>جميع المستخدمين</CardTitle>
+                  <CardDescription>مرتبون من الأكثر إلى الأقل</CardDescription>
+                </CardHeader>
+                <Table caption={`المستخدمون في ${activeCat.label}`}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead numeric>#</TableHead>
+                      <TableHead>المستخدم</TableHead>
+                      <TableHead numeric>العدد</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeUsers.length === 0 ? (
+                      <TableStateRow colSpan={3}>
+                        <EmptyState kind="first-use" compact title="لا توجد بيانات" />
+                      </TableStateRow>
+                    ) : (
+                      activeUsers.map((u, i) => (
+                        <TableRow key={u._id}>
+                          <TableCell numeric className="w-12 text-text-tertiary">
+                            {i + 1}
+                          </TableCell>
+                          <TableCell>
+                            <PersonCell name={u.name} secondary={u.email} secondaryLtr />
+                          </TableCell>
+                          <TableCell numeric className="font-semibold">
+                            {formatNumber(u[activeCat.countField] || 0)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </>
+          )}
         </div>
       )}
     </div>

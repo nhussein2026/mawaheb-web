@@ -1,158 +1,138 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { login } from "../features/user/authSlice";
-import { toast } from "react-toastify";
 import { Button } from "../components/ui/Button";
-import { LogIn, Mail, Lock } from "lucide-react";
+import { Field, Input } from "../components/ui/Input";
+import { Callout } from "../components/ui/Feedback";
+import { AuthCard, authLinkCls } from "../components/ui/AuthCard";
+import { API_BASE_URL } from "../services/api/config";
+import { homePathFor } from "../utils/roles";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Sign in (§5.1): wrong credentials get one generic message that never says
+// which part was wrong. Field formats are checked on blur, required on submit.
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const emailRef = useRef(null);
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
+  const validateField = (name, value) => {
+    if (name === "email") {
+      if (!value.trim()) return "يُرجى إدخال البريد الإلكتروني";
+      if (!EMAIL_RE.test(value.trim())) return "يُرجى إدخال بريد إلكتروني صحيح، مثل name@example.com";
+    }
+    if (name === "password" && !value) return "يُرجى إدخال كلمة المرور";
+    return "";
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    // Once a field shows an error it re-checks while typing.
+    if (errors[name]) setErrors((er) => ({ ...er, [name]: validateField(name, value) }));
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    if (value) setErrors((er) => ({ ...er, [name]: validateField(name, value) }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateEmail(formData.email)) {
-      toast.error("البريد الإلكتروني غير صالح");
+    const next = { email: validateField("email", form.email), password: validateField("password", form.password) };
+    setErrors(next);
+    setFormError("");
+    if (next.email || next.password) {
+      (next.email ? emailRef.current : document.getElementById("password"))?.focus();
       return;
     }
+    setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("تم تسجيل الدخول بنجاح!");
-        const { token, user } = data;
-        dispatch(login({ token, user }));
-        const staffRanks = ["super_admin", "track_supervisor", "trainer", "gate_guard"];
-        if (user?.instituteRole === "student" || user?.role === "Institute Student") {
-          navigate("/institute-portal");
-        } else if (staffRanks.includes(user?.instituteRole)) {
-          navigate("/institute-admin");
-        } else if (user?.role === "Admin") {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/");
-        }
-      } else {
-        toast.error(data.message || "حدث خطأ أثناء تسجيل الدخول!");
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim().toLowerCase(), password: form.password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setFormError(
+          response.status >= 500
+            ? "حدث خطأ من جهتنا. يُرجى المحاولة بعد قليل."
+            : "البريد الإلكتروني أو كلمة المرور غير صحيحة. يُرجى المحاولة مرة أخرى."
+        );
+        return;
       }
-    } catch (error) {
-      console.error("Error logging in:", error);
-      toast.error("حدث خطأ في الاتصال بالخادم");
+      const { token, user } = data;
+      dispatch(login({ token, user }));
+      navigate(location.state?.from || homePathFor(user), { replace: true });
+    } catch {
+      setFormError("تعذّر الاتصال بالخادم. يُرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-page p-4" dir="rtl">
-      <div className="bg-surface-card shadow-xl rounded-3xl p-8 max-w-md w-full border border-border-subtle overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 blur-2xl opacity-50"></div>
-        
-        <div className="text-center mb-8 relative z-10">
-          <div className="w-16 h-16 bg-brand-800 rounded-2xl flex items-center justify-center text-accent-400 mx-auto mb-4 shadow-lg shadow-brand-900/20">
-            <LogIn size={32} />
-          </div>
-          <h2 className="text-3xl font-bold text-text-primary mb-2">تسجيل الدخول</h2>
-          <p className="text-text-secondary text-sm">مرحباً بك مجدداً في منصة مواهب</p>
+    <AuthCard
+      title="تسجيل الدخول"
+      description="مرحبًا بك في منصة مواهب"
+      footer={
+        <>
+          ليس لديك حساب؟{" "}
+          <Link to="/signup" className={authLinkCls}>
+            إنشاء حساب
+          </Link>
+        </>
+      }
+    >
+      {formError ? (
+        <Callout tone="danger" className="mb-5">
+          {formError}
+        </Callout>
+      ) : null}
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <Field label="البريد الإلكتروني" error={errors.email} id="email">
+          <Input
+            ref={emailRef}
+            type="email"
+            name="email"
+            dir="ltr"
+            autoComplete="email"
+            inputMode="email"
+            value={form.email}
+            onChange={handleChange}
+            onBlur={handleBlur}
+          />
+        </Field>
+        <Field label="كلمة المرور" error={errors.password} id="password">
+          <Input
+            type="password"
+            name="password"
+            dir="ltr"
+            autoComplete="current-password"
+            value={form.password}
+            onChange={handleChange}
+            onBlur={handleBlur}
+          />
+        </Field>
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className={`${authLinkCls} text-sm`}>
+            نسيت كلمة المرور؟
+          </Link>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
-          <div className="space-y-2">
-            <label
-              htmlFor="email"
-              className="block text-sm font-bold text-text-secondary pr-1"
-            >
-              البريد الإلكتروني
-            </label>
-            <div className="relative">
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="example@mail.com"
-                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
-                required
-              />
-              <Mail className="absolute right-3 top-3.5 text-text-muted" size={18} />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center pr-1">
-              <label
-                htmlFor="password"
-                className="block text-sm font-bold text-text-secondary"
-              >
-                كلمة المرور
-              </label>
-              <Link
-                to="/forgot-password"
-                className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors"
-              >
-                نسيت كلمة المرور؟
-              </Link>
-            </div>
-            <div className="relative">
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="w-full pl-3 pr-10 py-3 rounded-xl border border-border-default focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 outline-none transition-all bg-neutral-50/50"
-                required
-              />
-              <Lock className="absolute right-3 top-3.5 text-text-muted" size={18} />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full h-12 text-lg shadow-lg shadow-brand-900/10"
-          >
-            دخول للمنصة
-          </Button>
-        </form>
-
-        <div className="mt-8 text-center relative z-10">
-          <p className="text-sm text-text-secondary">
-            ليس لديك حساب؟{" "}
-            <Link to="/signup" className="text-brand-600 font-bold hover:underline">
-              سجل الآن
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>
+          تسجيل الدخول
+        </Button>
+      </form>
+    </AuthCard>
   );
 };
 

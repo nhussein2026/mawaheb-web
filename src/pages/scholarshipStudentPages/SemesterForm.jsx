@@ -1,269 +1,222 @@
-import { useState, useEffect } from "react";
-import { Button } from "../../components/ui/Button";
-import { Plus, Trash2, X, Image as ImageIcon, BookOpen } from "lucide-react";
+import { useState } from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { Plus, Trash2 } from "lucide-react";
+import { Button, IconButton } from "../../components/ui/Button";
+import { Field, Input, Select, RequiredNote } from "../../components/ui/Input";
+import { Callout } from "../../components/ui/Feedback";
+import { Dialog } from "../../components/ui/Dialog";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card, CardContent } from "../../components/ui/Card";
+import { API_BASE_URL } from "../../services/api/config";
 
-const SemesterForm = ({ initialData, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    semesterNumber: "",
-    semesterGPA: "",
-    totalGPA: "",
-    courses: [],
-    resultImage: null,
+const LETTER_GRADES = ["AA", "AB", "BA", "BB", "CB", "CC", "DC", "DD", "FF"];
+const FORM_ID = "semester-form";
+const EMPTY = { semesterNumber: "", semesterGPA: "", totalGPA: "", courses: [], resultImage: null };
+const newCourse = () => ({ courseCode: "", courseName: "", grade: "", credits: "", ects: "", lg: "AA" });
+
+const inRange = (v, min, max) => v !== "" && !Number.isNaN(Number(v)) && Number(v) >= min && Number(v) <= max;
+
+function validate(f) {
+  const e = {};
+  if (!inRange(f.semesterNumber, 1, 20)) e.semesterNumber = "يُرجى إدخال رقم الفصل (1 أو أكثر)";
+  if (!inRange(f.semesterGPA, 0, 4)) e.semesterGPA = "يجب أن يكون المعدل الفصلي بين 0 و4";
+  if (!inRange(f.totalGPA, 0, 4)) e.totalGPA = "يجب أن يكون المعدل التراكمي بين 0 و4";
+  f.courses.forEach((c, i) => {
+    if (!String(c.courseCode).trim()) e[`c${i}-courseCode`] = "يُرجى إدخال كود المادة";
+    if (!String(c.courseName).trim()) e[`c${i}-courseName`] = "يُرجى إدخال اسم المادة";
+    if (!inRange(c.grade, 0, 100)) e[`c${i}-grade`] = "يجب أن تكون الدرجة بين 0 و100";
+    if (!inRange(c.credits, 0, 60)) e[`c${i}-credits`] = "يُرجى إدخال عدد الساعات";
+    if (!inRange(c.ects, 0, 60)) e[`c${i}-ects`] = "يُرجى إدخال نقاط ECTS";
   });
+  return e;
+}
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        ...initialData,
-        resultImage: initialData.resultImage || null,
-      });
+/**
+ * Add or edit a semester with its courses. Inside the semester list it is a
+ * dialog driven by `onSave` / `onCancel`; opened directly at /semester-create
+ * it is a page that saves on its own and returns to the list.
+ */
+const SemesterForm = ({ initialData, onSave, onCancel }) => {
+  const token = useSelector((s) => s.auth.token);
+  const navigate = useNavigate();
+  const standalone = !onSave;
+  const [form, setForm] = useState(() => ({
+    ...EMPTY,
+    ...(initialData || {}),
+    totalGPA: initialData?.totalGPA ?? initialData?.totalGpa ?? "",
+    courses: (initialData?.courses || []).map((c) => ({ ...c })),
+  }));
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(initialData?._id);
+
+  const update = (next) => {
+    setForm(next);
+    if (Object.keys(errors).length) setErrors(validate(next));
+  };
+  const set = (k) => (e) => update({ ...form, [k]: e.target.value });
+  const setCourse = (i, k) => (e) =>
+    update({ ...form, courses: form.courses.map((c, j) => (j === i ? { ...c, [k]: e.target.value } : c)) });
+
+  const onImage = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((er) => ({ ...er, resultImage: "حجم الصورة أكبر من 5 ميغابايت. يُرجى اختيار صورة أصغر." }));
+      return;
     }
-  }, [initialData]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm((f) => ({ ...f, resultImage: reader.result }));
+      setErrors((er) => ({ ...er, resultImage: "" }));
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleCourseChange = (index, field, value) => {
-    const updatedCourses = [...formData.courses];
-    updatedCourses[index][field] = value;
-    setFormData({ ...formData, courses: updatedCourses });
-  };
+  const close = () => (standalone ? navigate("/semester-list") : onCancel?.());
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, resultImage: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const addNewCourse = () => {
-    setFormData({
-      ...formData,
-      courses: [
-        ...formData.courses,
-        {
-          courseCode: "",
-          courseName: "",
-          grade: 0,
-          credits: 0,
-          ects: 0,
-          lg: "AA",
-        },
-      ],
-    });
-  };
-
-  const handleSubmit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    const found = validate(form);
+    setErrors(found);
+    setFormError("");
+    const first = Object.keys(found)[0];
+    if (first) {
+      document.getElementById(`sem-${first}`)?.focus();
+      return;
+    }
+    setSaving(true);
+    try {
+      if (standalone) {
+        await axios.post(`${API_BASE_URL}/semester`, form, { headers: { Authorization: `Bearer ${token}` } });
+        toast.success("تمت إضافة الفصل الدراسي");
+        navigate("/semester-list");
+      } else {
+        await onSave(form);
+      }
+    } catch (err) {
+      setFormError(err?.response?.data?.message || "تعذّر حفظ الفصل الدراسي ولم يُحفظ. يُرجى المحاولة مرة أخرى.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const fields = (
+    <form id={FORM_ID} onSubmit={submit} noValidate className="space-y-6">
+      {formError ? <Callout tone="danger">{formError}</Callout> : null}
+      <RequiredNote />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Field label="رقم الفصل" required error={errors.semesterNumber} id="sem-semesterNumber">
+          <Input type="number" inputMode="numeric" min="1" value={form.semesterNumber} onChange={set("semesterNumber")} dir="ltr" />
+        </Field>
+        <Field label="المعدل الفصلي" hint="من 4.00" required error={errors.semesterGPA} id="sem-semesterGPA">
+          <Input type="number" inputMode="decimal" step="0.01" min="0" max="4" value={form.semesterGPA} onChange={set("semesterGPA")} dir="ltr" />
+        </Field>
+        <Field label="المعدل التراكمي" hint="من 4.00" required error={errors.totalGPA} id="sem-totalGPA">
+          <Input type="number" inputMode="decimal" step="0.01" min="0" max="4" value={form.totalGPA} onChange={set("totalGPA")} dir="ltr" />
+        </Field>
+      </div>
+
+      <Field label="صورة كشف النتيجة" hint="JPG أو PNG أو WebP، حتى 5 ميغابايت" error={errors.resultImage} id="sem-resultImage">
+        <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={onImage} />
+      </Field>
+      {form.resultImage ? (
+        <img src={form.resultImage} alt="معاينة كشف النتيجة" className="max-h-40 w-auto rounded-md border border-border-default" />
+      ) : null}
+
+      <fieldset className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <legend className="text-heading-4 text-text-primary">المواد الدراسية</legend>
+          <Button variant="secondary" size="sm" onClick={() => update({ ...form, courses: [...form.courses, newCourse()] })}>
+            <Plus aria-hidden="true" /> إضافة مادة
+          </Button>
+        </div>
+        {form.courses.length === 0 ? (
+          <p className="rounded-md bg-subtle px-4 py-3 text-sm text-text-secondary">لم تُضف مواد بعد.</p>
+        ) : null}
+        {form.courses.map((c, i) => (
+          <div key={i} className="rounded-lg border border-border-default p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-label-md text-text-primary">
+                المادة <span className="num">{i + 1}</span>
+              </p>
+              <IconButton
+                label={`حذف المادة ${i + 1}`}
+                size="sm"
+                tone="danger"
+                onClick={() => update({ ...form, courses: form.courses.filter((_, j) => j !== i) })}
+              >
+                <Trash2 />
+              </IconButton>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="كود المادة" hint="مثال: CS101" required error={errors[`c${i}-courseCode`]} id={`sem-c${i}-courseCode`}>
+                <Input value={c.courseCode} onChange={setCourse(i, "courseCode")} dir="ltr" />
+              </Field>
+              <Field label="اسم المادة" required error={errors[`c${i}-courseName`]} id={`sem-c${i}-courseName`}>
+                <Input value={c.courseName} onChange={setCourse(i, "courseName")} dir="auto" />
+              </Field>
+              <Field label="الدرجة" hint="من 100" required error={errors[`c${i}-grade`]} id={`sem-c${i}-grade`}>
+                <Input type="number" inputMode="decimal" min="0" max="100" value={c.grade} onChange={setCourse(i, "grade")} dir="ltr" />
+              </Field>
+              <Field label="الساعات" required error={errors[`c${i}-credits`]} id={`sem-c${i}-credits`}>
+                <Input type="number" inputMode="numeric" min="0" value={c.credits} onChange={setCourse(i, "credits")} dir="ltr" />
+              </Field>
+              <Field label="ECTS" required error={errors[`c${i}-ects`]} id={`sem-c${i}-ects`}>
+                <Input type="number" inputMode="numeric" min="0" value={c.ects} onChange={setCourse(i, "ects")} dir="ltr" />
+              </Field>
+              <Field label="التقدير" id={`sem-c${i}-lg`}>
+                <Select value={c.lg} onChange={setCourse(i, "lg")} dir="ltr">
+                  {LETTER_GRADES.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          </div>
+        ))}
+      </fieldset>
+    </form>
+  );
+
+  const actions = (
+    <>
+      <Button variant="secondary" onClick={close} disabled={saving}>
+        إلغاء
+      </Button>
+      <Button type="submit" form={FORM_ID} loading={saving}>
+        {isEdit ? "حفظ التغييرات" : "إضافة الفصل"}
+      </Button>
+    </>
+  );
+
+  if (standalone) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="إضافة فصل دراسي"
+          breadcrumbs={[{ label: "السجل الأكاديمي", to: "/semester-list" }, { label: "إضافة فصل دراسي" }]}
+        />
+        <Card className="max-w-4xl">
+          <CardContent className="pt-5 sm:pt-6">
+            {fields}
+            <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-border-subtle pt-4">{actions}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-surface-overlay backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-surface-card p-8 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-border-subtle relative">
-        <button onClick={onCancel} className="absolute top-4 left-4 text-text-muted hover:text-error-text transition-colors">
-          <X size={24} />
-        </button>
-        
-        <h2 className="text-2xl font-bold mb-8 text-text-primary flex items-center gap-2">
-          {initialData?._id ? "تعديل بيانات الفصل" : "إضافة فصل دراسي جديد"}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-text-secondary">رقم الفصل</label>
-              <input
-                type="number"
-                name="semesterNumber"
-                value={formData.semesterNumber}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
-                required
-                min="1"
-                placeholder="1, 2, 3..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-text-secondary">المعدل الفصلي</label>
-              <input
-                type="number"
-                name="semesterGPA"
-                value={formData.semesterGPA}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
-                step="0.01"
-                min="0"
-                max="4.0"
-                placeholder="0.0 - 4.0"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-text-secondary">المعدل التراكمي</label>
-              <input
-                type="number"
-                name="totalGPA"
-                value={formData.totalGPA}
-                onChange={handleInputChange}
-                className="w-full p-3 bg-neutral-50 border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all"
-                step="0.01"
-                min="0"
-                max="4.0"
-                placeholder="0.0 - 4.0"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <label className="text-sm font-bold text-text-secondary block">صورة السجل / النتيجة</label>
-            <div className="border-2 border-dashed border-border-default rounded-2xl p-8 text-center space-y-2 hover:bg-neutral-50 transition-colors cursor-pointer relative">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <ImageIcon className="text-brand-600 mx-auto" size={32} />
-              <span className="text-sm text-text-muted block">انقر لرفع صورة النتيجة</span>
-            </div>
-            {formData.resultImage && (
-              <div className="mt-4 p-2 bg-neutral-50 rounded-xl border border-border-subtle inline-block">
-                <img
-                  src={formData.resultImage}
-                  alt="Result preview"
-                  className="max-w-xs h-auto max-h-40 object-contain rounded-lg"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-                <BookOpen className="text-brand-600" size={20} />
-                المواد الدراسية
-              </h3>
-              <Button type="button" variant="outline" size="sm" onClick={addNewCourse}>
-                <Plus className="ml-1 w-4 h-4" /> إضافة مادة
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              {formData.courses.map((course, index) => (
-                <div key={index} className="bg-neutral-50 p-6 rounded-2xl border border-border-subtle relative group transition-all hover:border-brand-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updatedCourses = [...formData.courses];
-                      updatedCourses.splice(index, 1);
-                      setFormData({ ...formData, courses: updatedCourses });
-                    }}
-                    className="absolute top-4 left-4 text-text-muted hover:text-error-text opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">كود المادة</label>
-                      <input
-                        type="text"
-                        value={course.courseCode}
-                        onChange={(e) => handleCourseChange(index, "courseCode", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
-                        required
-                        placeholder="CS101"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">اسم المادة</label>
-                      <input
-                        type="text"
-                        value={course.courseName}
-                        onChange={(e) => handleCourseChange(index, "courseName", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
-                        required
-                        placeholder="برمجة 1"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">الدرجة (0-100)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={course.grade}
-                        onChange={(e) => handleCourseChange(index, "grade", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">الساعات</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={course.credits}
-                        onChange={(e) => handleCourseChange(index, "credits", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">ECTS</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={course.ects}
-                        onChange={(e) => handleCourseChange(index, "ects", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider">التقدير</label>
-                      <select
-                        value={course.lg}
-                        onChange={(e) => handleCourseChange(index, "lg", e.target.value)}
-                        className="w-full p-2.5 bg-white border border-border-default rounded-xl focus:ring-2 focus:ring-brand-600 outline-none transition-all text-sm appearance-none"
-                      >
-                        {["AA", "AB", "BA", "BB", "CB", "CC", "DC", "DD", "FF"].map((grade) => (
-                          <option key={grade} value={grade}>{grade}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-8 border-t border-border-subtle">
-            <Button type="button" variant="ghost" onClick={onCancel} className="text-text-muted">
-              إلغاء
-            </Button>
-            <Button type="submit" variant="primary" className="px-10">
-              حفظ بيانات الفصل
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Dialog open title={isEdit ? `تعديل الفصل ${initialData.semesterNumber}` : "إضافة فصل دراسي"} size="lg" onClose={close} busy={saving} footer={actions}>
+      {fields}
+    </Dialog>
   );
 };
 

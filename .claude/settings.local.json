@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/data/code/clients/**)",
+      "Read(//mnt/data/code/clients/mawaheb-backend/**)"
+    ]
+  }
+}
