@@ -1,7 +1,7 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { ScrollText, CalendarDays, BookOpen, Trophy, ChevronLeft } from "lucide-react";
+import { ScrollText, CalendarDays, BookOpen, Trophy, ChevronLeft, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Avatar } from "../ui/Avatar";
 import { StatusBadge, HonorBadge } from "../ui/Badge";
@@ -10,6 +10,20 @@ import { formatRoleAr } from "../admin/adminCopy";
 import { useResource } from "../../hooks/useResource";
 import { API_BASE_URL } from "../../services/api/config";
 import { formatDate, formatNumber } from "../../utils/format";
+import { completionPercent } from "../../utils/profileCompletion";
+
+const GENDER_LABELS = { male: "ذكر", female: "أنثى" };
+
+const editLinkCls =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-md border border-border-control bg-surface px-4 text-sm font-semibold text-text-primary hover:bg-subtle [&_svg]:size-5";
+
+function ExternalLink({ href }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" dir="ltr" className="break-all text-brand-strong underline underline-offset-4">
+      {href.replace(/^https?:\/\//, "")}
+    </a>
+  );
+}
 
 const STAT_LABELS = [
   ["certificates", "الشهادات", "/student/certificates"],
@@ -89,6 +103,7 @@ const Profile = () => {
   const sp = profile.studentProfile || profile.scholarshipStudentProfile || profile.instituteStudentProfile || {};
   const stats = profile.statistics || {};
   const program = role === "Institute Student" ? sp.education_level : sp.program_of_study;
+  const percent = completionPercent(user);
 
   return (
     <div className="space-y-6">
@@ -111,6 +126,10 @@ const Profile = () => {
               </p>
             ) : null}
           </div>
+          <Link to="/profile/edit" className={`${editLinkCls} max-sm:w-full`}>
+            <Pencil aria-hidden="true" />
+            تعديل الملف الشخصي
+          </Link>
         </CardContent>
         {isStudent ? (
           <ul className="grid grid-cols-2 gap-px border-t border-border-subtle bg-border-subtle sm:grid-cols-3 lg:grid-cols-5">
@@ -124,6 +143,58 @@ const Profile = () => {
             ))}
           </ul>
         ) : null}
+      </Card>
+
+      {percent < 100 ? (
+        <Card variant="award">
+          <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:pt-6">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="font-semibold text-text-primary">
+                ملفك مكتمل بنسبة <span className="num">{percent}%</span>
+              </p>
+              <div
+                role="progressbar"
+                aria-label="اكتمال الملف الشخصي"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percent}
+                className="h-2 overflow-hidden rounded-full bg-surface"
+              >
+                <div className="h-full rounded-full bg-brand-strong" style={{ width: `${percent}%` }} />
+              </div>
+              <p className="text-sm text-text-secondary">أضف ما ينقص ليتعرّف عليك فريق المؤسسة ويصل إليك بسهولة.</p>
+            </div>
+            <Link
+              to="/profile/edit"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-brand-strong px-4 text-sm font-semibold text-brand-on-strong hover:bg-brand-strong-hover"
+            >
+              أكمل ملفك
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>المعلومات الشخصية</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {user.bio ? (
+            <p dir="auto" className="reading mb-3 whitespace-pre-line text-sm text-text-primary">
+              {user.bio}
+            </p>
+          ) : null}
+          <Details
+            items={[
+              ["رقم الهاتف", user.phone_number ? <bdi className="num">{user.phone_number}</bdi> : null],
+              ["تاريخ الميلاد", user.date_of_birth ? <span className="num">{formatDate(user.date_of_birth)}</span> : null],
+              ["الجنس", GENDER_LABELS[user.gender] || user.gender],
+              ["المستوى التعليمي الحالي", user.current_education_level],
+              ["LinkedIn", user.linkedin_link ? <ExternalLink href={user.linkedin_link} /> : null],
+              ["الموقع الشخصي", user.website ? <ExternalLink href={user.website} /> : null],
+            ]}
+          />
+        </CardContent>
       </Card>
 
       {isStudent ? (

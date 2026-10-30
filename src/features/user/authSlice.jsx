@@ -22,6 +22,11 @@ const authSlice = createSlice({
       console.log("Updated state:", state);
       // console.log("LocalStorage token:", localStorage.getItem('token'));
     },
+    // Keep the shell's name and photo in step after a profile edit.
+    updateUser(state, action) {
+      state.user = { ...state.user, ...action.payload };
+      localStorage.setItem('user', JSON.stringify(state.user));
+    },
     logout(state) {
       state.isLoggedIn = false;
       localStorage.setItem('isLoggedIn', 'false');
@@ -33,6 +38,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, updateUser, logout } = authSlice.actions;
 
 export default authSlice.reducer;

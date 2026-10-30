@@ -8,8 +8,20 @@ import { Callout } from "../components/ui/Feedback";
 import { AuthCard, authLinkCls } from "../components/ui/AuthCard";
 import { API_BASE_URL } from "../services/api/config";
 import { homePathFor } from "../utils/roles";
+import { hasApprovedRole, needsProfileCompletion } from "../utils/profileCompletion";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// A failed profile load never blocks sign-in; the user just goes home.
+async function fetchProfileUser(token) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/user/profile`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) return null;
+    return (await response.json())?.user || null;
+  } catch {
+    return null;
+  }
+}
 
 // Sign in (§5.1): wrong credentials get one generic message that never says
 // which part was wrong. Field formats are checked on blur, required on submit.
@@ -71,8 +83,16 @@ const Login = () => {
         return;
       }
       const { token, user } = data;
+      const next = location.state?.from || homePathFor(user);
+      // Approved users with an empty profile are asked to complete it first.
+      // Checked before storing the session: "/" redirects as soon as it has a token.
+      const profileUser = hasApprovedRole(user) ? await fetchProfileUser(token) : null;
       dispatch(login({ token, user }));
-      navigate(location.state?.from || homePathFor(user), { replace: true });
+      if (profileUser && needsProfileCompletion(profileUser)) {
+        navigate("/complete-profile", { replace: true, state: { from: next, profileUser } });
+        return;
+      }
+      navigate(next, { replace: true });
     } catch {
       setFormError("تعذّر الاتصال بالخادم. يُرجى التحقق من الاتصال بالإنترنت والمحاولة مرة أخرى.");
     } finally {

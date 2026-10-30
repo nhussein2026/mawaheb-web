@@ -18,6 +18,8 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Profile = lazy(() => import("./components/profile/Profile"));
 const ProfileComponent = lazy(() => import("./pages/NewProfile"));
+const EditProfile = lazy(() => import("./pages/EditProfile"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
 const Test = lazy(() => import("./components/profile/Profile"));
 
 // Student/General Pages
@@ -117,9 +119,13 @@ function App() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
         </Route>
 
+        {/* First sign-in after approval: focused page without a shell */}
+        <Route path="/complete-profile" element={<CompleteProfile />} />
+
         {/* ACCOUNT ROUTES — rendered inside the signed-in user's own shell */}
         <Route element={<AccountLayout />}>
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/edit" element={<EditProfile />} />
           <Route path="/pro" element={<Test />} />
           <Route path="/test" element={<ProfileComponent />} />
           <Route path="/universityDetails" element={<UniversityDetails />} />
