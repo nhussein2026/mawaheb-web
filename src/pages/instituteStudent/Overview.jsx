@@ -51,7 +51,7 @@ const Overview = () => {
           <StatGrid
             stats={[
               { label: "الدورات المسجلة", value: counts.courses ?? 0, to: "/institute-portal/courses" },
-              { label: "الشهادات الممنوحة", value: counts.certificates ?? 0, to: "/institute-portal/courses" },
+              { label: "الشهادات الممنوحة", value: counts.certificates ?? 0, to: "/institute-portal/certificates" },
               { label: "الإنجازات المعتمدة", value: counts.approvedAchievements ?? 0, to: "/institute-portal/achievements" },
               { label: "رصيد بنك الأفكار", value: counts.ideasBankBalance ?? 0, to: "/institute-portal/ideas" },
             ]}

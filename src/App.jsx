@@ -83,6 +83,7 @@ const ISAnnouncements = lazy(() => import("./pages/instituteStudent/Announcement
 const ISResults = lazy(() => import("./pages/instituteStudent/Results"));
 const ISEvaluations = lazy(() => import("./pages/instituteStudent/Evaluations"));
 const ISCourses = lazy(() => import("./pages/instituteStudent/Courses"));
+const ISCertificates = lazy(() => import("./pages/instituteStudent/Certificates"));
 const ISAchievements = lazy(() => import("./pages/instituteStudent/Achievements"));
 const ISIdeas = lazy(() => import("./pages/instituteStudent/Ideas"));
 const ISLeave = lazy(() => import("./pages/instituteStudent/Leave"));
@@ -206,6 +207,7 @@ function App() {
           <Route path="results" element={<ISResults />} />
           <Route path="evaluations" element={<ISEvaluations />} />
           <Route path="courses" element={<ISCourses />} />
+          <Route path="certificates" element={<ISCertificates />} />
           <Route path="achievements" element={<ISAchievements />} />
           <Route path="ideas" element={<ISIdeas />} />
           <Route path="leave" element={<ISLeave />} />

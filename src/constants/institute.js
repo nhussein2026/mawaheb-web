@@ -16,6 +16,7 @@ import {
   Trophy,
   Lightbulb,
   Wallet,
+  Award,
 } from "lucide-react";
 
 // Membership ranks
@@ -210,7 +211,8 @@ export const INSTITUTE_STUDENT_NAV = [
   { key: "announcements", group: "comms", label: "الإعلانات", to: "/institute-portal/announcements", icon: Megaphone },
   { key: "results", group: "study", label: "النتائج الدراسية", to: "/institute-portal/results", icon: ClipboardList },
   { key: "evaluations", group: "study", label: "تقارير التقويم", to: "/institute-portal/evaluations", icon: FileBarChart },
-  { key: "courses", group: "study", label: "الدورات والشهادات", to: "/institute-portal/courses", icon: BookOpen },
+  { key: "courses", group: "study", label: "الدورات التدريبية", to: "/institute-portal/courses", icon: BookOpen },
+  { key: "certificates", group: "study", label: "الشهادات", to: "/institute-portal/certificates", icon: Award },
   { key: "achievements", group: "activity", label: "إنجازاتي", to: "/institute-portal/achievements", icon: Trophy },
   { key: "ideas", group: "activity", label: "بنك الأفكار", to: "/institute-portal/ideas", icon: Lightbulb },
   { key: "leave", group: "requests", label: "طلبات الاستئذان", to: "/institute-portal/leave", icon: PlaneTakeoff },

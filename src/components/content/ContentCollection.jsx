@@ -8,13 +8,14 @@ import { Button, IconButton } from "../ui/Button";
 import { Dialog } from "../ui/Dialog";
 import { Field, Input, Select, Textarea, RequiredNote } from "../ui/Input";
 import { Callout, EmptyState, SkeletonCard } from "../ui/Feedback";
-import { Chip } from "../ui/Badge";
+import { Chip, HonorBadge } from "../ui/Badge";
 import { useConfirm } from "../ui/confirmContext";
 import { useResource } from "../../hooks/useResource";
 import { API_BASE_URL } from "../../services/api/config";
 import { formatDate } from "../../utils/format";
 
 const FORM_ID = "content-form";
+const DEFAULT_ACCEPT = "image/jpeg,image/png,image/webp";
 
 const emptyValues = (fields) =>
   Object.fromEntries(fields.map((f) => [f.name, f.type === "file" ? null : f.type === "select" ? f.options[0] : ""]));
@@ -41,11 +42,19 @@ const valuesFrom = (fields, item) =>
  *   image         (item) => image URL or null
  *   link          (item) => external link or null
  *   meta          (item) => short text under the title (e.g. a category)
+ *   details       (item) => extra node under the title (e.g. a serial number)
  *   date          (item) => date to show
- *   copy          { title, description, noun, add, empty, emptyHint }
+ *   readOnly      (item) => true hides edit / delete and shows `readOnlyBadge`
+ *   patch         send only non-empty values on create and only changed ones
+ *                 on update (for endpoints that keep fields they don't receive)
+ *   copy          { title, description, noun, add, empty, emptyHint, listTitle,
+ *                   readOnlyBadge, forbidden }
+ *
+ * `children` render between the page header and the list.
  */
-export function ContentCollection({ config }) {
-  const { endpoint, json = false, createExtra, pick, fields, image, link, meta, date, copy } = config;
+export function ContentCollection({ config, children }) {
+  const { endpoint, json = false, createExtra, pick, fields, image, link, meta, details, date, readOnly, patch = false, copy } =
+    config;
   const token = useSelector((s) => s.auth.token);
   const user = useSelector((s) => s.auth.user);
   const confirm = useConfirm();
@@ -102,7 +111,9 @@ export function ContentCollection({ config }) {
       if (f.required && (val == null || String(val).trim() === "")) e[f.name] = `يُرجى إدخال ${f.label}`;
       if (f.type === "url" && val && !/^https?:\/\/\S+$/i.test(String(val).trim()))
         e[f.name] = "يُرجى إدخال رابط صحيح يبدأ بـ https://";
-      if (f.type === "file" && val && val.size > 5 * 1024 * 1024) e[f.name] = "حجم الملف أكبر من 5 ميغابايت. يُرجى اختيار ملف أصغر.";
+      if (f.type === "file" && val && !(f.accept || DEFAULT_ACCEPT).split(",").includes(val.type))
+        e[f.name] = f.typeError || "صيغة الملف غير مدعومة. يُرجى اختيار صورة JPG أو PNG أو WebP.";
+      else if (f.type === "file" && val && val.size > 5 * 1024 * 1024) e[f.name] = "حجم الملف أكبر من 5 ميغابايت. يُرجى اختيار ملف أصغر.";
     });
     return e;
   };
@@ -126,7 +137,19 @@ export function ContentCollection({ config }) {
     }
     const isNew = editing === "new";
     let body;
-    if (json) {
+    if (patch) {
+      const before = isNew ? {} : valuesFrom(fields, editing);
+      const changed = Object.entries(values).filter(([k, v]) => {
+        if (v === null || String(v).trim() === "") return false;
+        return v instanceof File || String(v).trim() !== String(before[k] ?? "").trim();
+      });
+      if (!isNew && !changed.length) {
+        close();
+        return;
+      }
+      body = new FormData();
+      changed.forEach(([k, v]) => body.append(k, v instanceof File ? v : String(v).trim()));
+    } else if (json) {
       body = JSON.stringify({ ...values, ...(isNew && createExtra ? createExtra(user) : {}) });
     } else {
       body = new FormData();
@@ -146,8 +169,15 @@ export function ContentCollection({ config }) {
       toast.success(isNew ? `تمت إضافة ${copy.noun}` : "تم حفظ التغييرات");
       close();
     } catch (err) {
+      if (err.status === 404 && !isNew) {
+        toast.error("لم يعد هذا العنصر موجودًا. تم تحديث القائمة.");
+        close();
+        reload();
+        return;
+      }
       setFormError(
-        err.serverMessage ||
+        (err.status === 403 && (copy.forbidden || "لا تملك صلاحية تعديل هذا العنصر.")) ||
+          err.serverMessage ||
           (err.status >= 500 || !err.status
             ? "حدث خطأ ولم تُحفظ التغييرات. يُرجى المحاولة بعد قليل."
             : "تعذّر الحفظ. يُرجى مراجعة البيانات والمحاولة مرة أخرى.")
@@ -169,8 +199,13 @@ export function ContentCollection({ config }) {
       await request(`${endpoint}/${item._id}`, { method: "DELETE" });
       setItems((list) => list.filter((it) => it._id !== item._id));
       toast.success(`تم حذف ${copy.noun}`);
-    } catch {
-      toast.error("تعذّر الحذف. يُرجى المحاولة مرة أخرى.");
+    } catch (err) {
+      if (err.status === 404) {
+        setItems((list) => list.filter((it) => it._id !== item._id));
+        toast.info("كان هذا العنصر محذوفًا من قبل.");
+      } else {
+        toast.error(err.status === 403 && copy.forbidden ? copy.forbidden : "تعذّر الحذف. يُرجى المحاولة مرة أخرى.");
+      }
     }
   };
 
@@ -187,6 +222,12 @@ export function ContentCollection({ config }) {
           </Button>
         }
       />
+
+      {children}
+
+      {copy.listTitle && status !== "failed" ? (
+        <h2 className="font-display text-heading-3 text-text-primary">{copy.listTitle}</h2>
+      ) : null}
 
       {status === "loading" ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -208,6 +249,7 @@ export function ContentCollection({ config }) {
             const img = image?.(item);
             const href = link?.(item);
             const when = date?.(item) ?? item.createdAt;
+            const locked = readOnly?.(item);
             return (
               <li key={item._id}>
                 <Card as="article" className="flex h-full flex-col overflow-hidden">
@@ -232,16 +274,20 @@ export function ContentCollection({ config }) {
                       <h2 dir="auto" className="min-w-0 text-heading-4 text-text-primary">
                         {item.title}
                       </h2>
-                      <div className="-me-2 -mt-1 flex shrink-0">
-                        <IconButton label={`تعديل ${item.title}`} size="sm" onClick={() => openEdit(item)}>
-                          <Pencil />
-                        </IconButton>
-                        <IconButton label={`حذف ${item.title}`} size="sm" tone="danger" onClick={() => remove(item)}>
-                          <Trash2 />
-                        </IconButton>
-                      </div>
+                      {locked ? null : (
+                        <div className="-me-2 -mt-1 flex shrink-0">
+                          <IconButton label={`تعديل ${item.title}`} size="sm" onClick={() => openEdit(item)}>
+                            <Pencil />
+                          </IconButton>
+                          <IconButton label={`حذف ${item.title}`} size="sm" tone="danger" onClick={() => remove(item)}>
+                            <Trash2 />
+                          </IconButton>
+                        </div>
+                      )}
                     </div>
+                    {locked && copy.readOnlyBadge ? <HonorBadge className="self-start">{copy.readOnlyBadge}</HonorBadge> : null}
                     {meta?.(item) ? <Chip className="self-start">{meta(item)}</Chip> : null}
+                    {details?.(item)}
                     {item.description || item.content ? (
                       <p dir="auto" className="line-clamp-4 whitespace-pre-wrap text-sm text-text-secondary">
                         {item.description || item.content}
@@ -309,7 +355,7 @@ export function ContentCollection({ config }) {
                   ))}
                 </Select>
               ) : f.type === "file" ? (
-                <Input type="file" accept={f.accept || "image/jpeg,image/png,image/webp"} onChange={setField(f.name)} />
+                <Input type="file" accept={f.accept || DEFAULT_ACCEPT} onChange={setField(f.name)} />
               ) : (
                 <Input
                   type={f.type || "text"}

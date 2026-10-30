@@ -144,7 +144,7 @@ export function studentNav(user) {
         isStudent && { key: "courses", label: "الدورات التدريبية", to: "/student/courses", icon: BookOpen },
         isStudent && { key: "events", label: "الفعاليات والأنشطة", to: "/student/events", icon: CalendarDays },
         isStudent && { key: "achievements", label: "إنجازاتي", to: "/student/achievements", icon: Trophy },
-        isStudent && { key: "certificates", label: "الشهادات المهنية", to: "/student/certificates", icon: ScrollText },
+        isStudent && { key: "certificates", label: "الشهادات", to: "/student/certificates", icon: ScrollText },
         isStudent && { key: "notes", label: "الملاحظات", to: "/notes", icon: StickyNote },
       ],
     },
